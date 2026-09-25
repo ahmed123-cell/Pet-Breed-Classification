@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Data & Large Files (Tracked by DVC)
+data/oxford-iiit-pet/
+data/images/
+data/annotations/
+data/corrupted/
+data/raw/
+models/checkpoints/
+models/exported/
+*.pth
+*.pt
+*.onnx*
+*.xml
+*.bin
+*.engine
+
+# MLflow & BentoML
+mlruns/
+*.db
+mlflow.db
+.bentoml/
+bentoml/
+
+
+# Testing & Reports
+.pytest_cache/
+.coverage
+htmlcov/
+reports/*.html
+reports/*.png
+reports/*.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

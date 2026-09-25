@@ -1,0 +1,85 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Inference Latency (p95 / p50)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pet_breed_inference_latency_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p95 Latency (ms)",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(pet_breed_inference_latency_seconds_bucket[1m])) by (le)) * 1000",
+          "legendFormat": "p50 Latency (ms)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "title": "Data Drift Scores (MMD & Cheap Pixel)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "pet_breed_embedding_drift_mmd",
+          "legendFormat": "Embedding MMD Score",
+          "refId": "A"
+        },
+        {
+          "expr": "pet_breed_pixel_drift_score{metric='brightness'}",
+          "legendFormat": "Pixel Brightness Wasserstein",
+          "refId": "B"
+        },
+        {
+          "expr": "pet_breed_pixel_drift_score{metric='sharpness'}",
+          "legendFormat": "Pixel Sharpness Wasserstein",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "title": "Calibrated Confidence & Abstention Decisions",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(pet_breed_abstention_total{decision='confident'}[1m]))",
+          "legendFormat": "Confident Rate",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(pet_breed_abstention_total{decision='uncertain'}[1m]))",
+          "legendFormat": "Abstained (Uncertain) Rate",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["mlops", "cv", "pet-breed"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Pet Breed Classification MLOps Observability",
+  "uid": "pet-breed-mlops-dashboard",
+  "version": 1
+}

@@ -1,0 +1,57 @@
+stages:
+  download_data:
+    cmd: python -m pet_breed.data.download
+    deps:
+      - src/pet_breed/data/download.py
+    outs:
+      - data/images
+      - data/annotations
+
+  build_manifest:
+    cmd: python -m pet_breed.data.manifest
+    deps:
+      - data/images
+      - data/labels.json
+      - src/pet_breed/data/corruptions.py
+      - src/pet_breed/data/manifest.py
+    outs:
+      - data/manifest.json
+      - data/corrupted
+
+  train_baseline:
+    cmd: python -m pet_breed.training.train --backbone resnet50 --lr 0.0001 --batch_size 32 --epochs 5 --register PetBreedClassifier
+    deps:
+      - data/manifest.json
+      - src/pet_breed/training/train.py
+      - src/pet_breed/calibration/temperature_scaling.py
+    params:
+      - src/pet_breed/config.py:
+        - DEFAULT_BATCH_SIZE
+        - DEFAULT_LEARNING_RATE
+    outs:
+      - models/checkpoints/resnet50_best.pth
+      - models/exported/resnet50_calibrated.pth
+      - reports/calibration.png
+
+  optimize_models:
+    cmd: python -m pet_breed.optimization.benchmark
+    deps:
+      - models/exported/resnet50_calibrated.pth
+      - src/pet_breed/optimization/benchmark.py
+      - src/pet_breed/optimization/onnx_export.py
+      - src/pet_breed/optimization/ptq.py
+      - src/pet_breed/optimization/qat.py
+      - src/pet_breed/optimization/prune.py
+      - src/pet_breed/optimization/distill.py
+    outs:
+      - models/exported/model_fp32.onnx
+      - reports/optimization_benchmark.md
+
+  drift_benchmark:
+    cmd: python -m pet_breed.monitoring.scorecard
+    deps:
+      - data/corrupted
+      - models/exported/resnet50_calibrated.pth
+      - src/pet_breed/monitoring/scorecard.py
+    outs:
+      - reports/drift_scorecard.md
