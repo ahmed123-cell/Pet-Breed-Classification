@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Breed Classification AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            padding: 1.25rem 2rem;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand-icon {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-text h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 850px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 2px dashed rgba(99, 102, 241, 0.4);
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.5);
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.5rem;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        .upload-icon {
+            font-size: 2.8rem;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+            transition: transform 0.2s ease;
+        }
+
+        .upload-zone:hover .upload-icon {
+            transform: translateY(-4px);
+        }
+
+        .upload-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .upload-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* Image Preview */
+        .preview-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #0b0f19;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .change-btn {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 0.4rem 0.8rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .change-btn:hover {
+            background: var(--primary);
+        }
+
+        /* Actions */
+        .btn-predict {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 0.9rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
+        }
+
+        .btn-predict:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-predict:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Quick Samples */
+        .samples-section {
+            margin-top: 0.5rem;
+        }
+
+        .samples-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .samples-grid {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .sample-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.4rem 0.8rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .sample-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* Results Display */
+        .empty-results {
+            height: 100%;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+            gap: 0.75rem;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        .results-content {
+            display: none;
+            flex-direction: column;
+            gap: 1.25rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .primary-result {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .breed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .breed-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+        }
+
+        .species-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .decision-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.35rem 0.8rem;
+            border-radius: var(--radius-sm);
+            width: fit-content;
+        }
+
+        .decision-confident {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .decision-uncertain {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .conf-meter-wrapper {
+            margin-top: 0.4rem;
+        }
+
+        .conf-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .conf-label {
+            color: var(--text-muted);
+        }
+
+        .conf-val {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.1);
+            height: 10px;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #10b981);
+            border-radius: 9999px;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Top 3 Breakdown */
+        .breakdown-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+
+        .top3-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .top3-item {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .top3-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .top3-bar-bg {
+            background: rgba(255, 255, 255, 0.06);
+            height: 6px;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .top3-bar-fill {
+            height: 100%;
+            background: #6366f1;
+            border-radius: 9999px;
+            width: 0%;
+            transition: width 0.6s ease;
+        }
+
+        /* Meta Footer */
+        .meta-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* Bottom Links & Info */
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .quick-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: var(--transition);
+        }
+
+        .quick-link:hover {
+            color: #fff;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <span class="brand-icon">🐾</span>
+                <div class="brand-text">
+                    <h1>Pet Breed Classification AI</h1>
+                    <p>Production Deep Learning Service with Calibrated Abstention</p>
+                </div>
+            </div>
+            <div class="status-pill" id="health-pill">
+                <span class="status-dot"></span>
+                <span id="health-text">Online • v1.0.0</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-grid">
+            <!-- Left: Upload & Input Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Input Pet Photo</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">JPG, PNG, WEBP</span>
+                </div>
+
+                <div class="upload-zone" id="drop-zone">
+                    <div id="upload-prompt">
+                        <div class="upload-icon">📸</div>
+                        <div class="upload-title">Drag & drop your pet photo here</div>
+                        <div class="upload-subtitle">or click to browse from device</div>
+                    </div>
+                    
+                    <div class="preview-container" id="preview-box">
+                        <img id="image-preview" class="preview-img" src="" alt="Pet Preview">
+                        <button class="change-btn" id="change-btn">Change Photo</button>
+                    </div>
+                </div>
+                <input type="file" id="file-input" accept="image/*">
+
+                <button class="btn-predict" id="predict-btn" disabled>
+                    <span class="spinner" id="spinner"></span>
+                    <span id="predict-btn-text">Identify Pet Breed</span>
+                </button>
+
+                <!-- Quick Samples Gallery -->
+                <div class="samples-section">
+                    <div class="samples-title">⚡ Quick Test Samples:</div>
+                    <div class="samples-grid">
+                        <button class="sample-btn" onclick="loadSample('Bengal_2.jpg', 'Bengal Cat')">🐱 Bengal Cat</button>
+                        <button class="sample-btn" onclick="loadSample('beagle_2.jpg', 'Beagle')">🐶 Beagle</button>
+                        <button class="sample-btn" onclick="loadSample('Persian_2.jpg', 'Persian')">🐱 Persian</button>
+                        <button class="sample-btn" onclick="loadSample('boxer_2.jpg', 'Boxer')">🐶 Boxer</button>
+                        <button class="sample-btn" onclick="loadSample('Siamese_2.jpg', 'Siamese')">🐱 Siamese</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Results Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Classification Results</span>
+                    <span id="latency-tag" style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;"></span>
+                </div>
+
+                <div class="empty-results" id="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <p>Upload a pet picture or select a sample on the left to run calibrated inference.</p>
+                </div>
+
+                <div class="results-content" id="results-box">
+                    <!-- Primary Decision & Breed -->
+                    <div class="primary-result">
+                        <div class="breed-header">
+                            <div>
+                                <div class="breed-name" id="res-breed">Breed Name</div>
+                                <div style="margin-top: 4px;">
+                                    <span class="species-badge" id="res-species">🐶 Dog</span>
+                                </div>
+                            </div>
+                            <div class="decision-badge" id="res-decision">Confident</div>
+                        </div>
+
+                        <div class="conf-meter-wrapper">
+                            <div class="conf-meta">
+                                <span class="conf-label">Calibrated Confidence</span>
+                                <span class="conf-val" id="res-conf-pct">98.4%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="res-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top 3 Ranking -->
+                    <div>
+                        <div class="breakdown-title">Top-3 Candidates Ranking</div>
+                        <div class="top3-list" id="top3-container">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Metadata Footer -->
+                    <div class="meta-footer">
+                        <span id="res-model-ver">Model: v1.0.0</span>
+                        <span id="res-abstention-threshold">Threshold: ≥ 0.65</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="quick-links">
+            <a class="quick-link" href="/docs" target="_blank">📖 Swagger API Docs</a>
+            <a class="quick-link" href="/health" target="_blank">🩺 Health Endpoint</a>
+            <a class="quick-link" href="/metrics" target="_blank">📊 Prometheus Metrics</a>
+            <a class="quick-link" href="/redoc" target="_blank">📑 Redoc Contract</a>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewBox = document.getElementById('preview-box');
+        const imagePreview = document.getElementById('image-preview');
+        const changeBtn = document.getElementById('change-btn');
+        const predictBtn = document.getElementById('predict-btn');
+        const predictBtnText = document.getElementById('predict-btn-text');
+        const spinner = document.getElementById('spinner');
+        const emptyState = document.getElementById('empty-state');
+        const resultsBox = document.getElementById('results-box');
+        const latencyTag = document.getElementById('latency-tag');
+
+        let currentFile = null;
+
+        // Health Check Poll
+        async function checkHealth() {
+            try {
+                const res = await fetch('/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('health-text').innerText = `Online • ${data.model_version}`;
+                }
+            } catch (e) {
+                document.getElementById('health-text').innerText = 'Offline / Connecting';
+                document.getElementById('health-pill').style.color = '#f87171';
+            }
+        }
+        checkHealth();
+
+        // Drop Zone Handlers
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== changeBtn) fileInput.click();
+        });
+
+        changeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        ['dragenter', 'dragover'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleSelectedFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleSelectedFile(e.target.files[0]);
+            }
+        });
+
+        function handleSelectedFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file (JPG, PNG, WEBP, etc.)');
+                return;
+            }
+            currentFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                previewBox.style.display = 'flex';
+                predictBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Quick Sample Loader
+        async function loadSample(filename, label) {
+            try {
+                const url = `/samples/${filename}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Sample not found');
+                const blob = await res.blob();
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+                handleSelectedFile(file);
+                // Trigger auto prediction
+                predict();
+            } catch (err) {
+                console.error(err);
+                alert(`Sample ${label} not available directly.`);
+            }
+        }
+
+        // Predict API Call
+        predictBtn.addEventListener('click', predict);
+
+        async function predict() {
+            if (!currentFile) return;
+
+            predictBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            predictBtnText.innerText = 'Analyzing...';
+            latencyTag.innerText = '';
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const latency = (performance.now() - startTime).toFixed(0);
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Prediction failed');
+                }
+
+                const data = await response.json();
+                renderResults(data, latency);
+            } catch (err) {
+                alert(`Prediction Error: ${err.message}`);
+            } finally {
+                predictBtn.disabled = false;
+                spinner.style.display = 'none';
+                predictBtnText.innerText = 'Identify Pet Breed';
+            }
+        }
+
+        function formatBreedName(str) {
+            return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function renderResults(data, latency) {
+            emptyState.style.display = 'none';
+            resultsBox.style.display = 'flex';
+            latencyTag.innerText = `⚡ ${latency} ms`;
+
+            // Breed & Species
+            document.getElementById('res-breed').innerText = formatBreedName(data.breed);
+            const speciesEl = document.getElementById('res-species');
+            speciesEl.innerText = data.species === 'cat' ? '🐱 Cat' : '🐶 Dog';
+
+            // Decision
+            const decEl = document.getElementById('res-decision');
+            if (data.decision === 'confident') {
+                decEl.className = 'decision-badge decision-confident';
+                decEl.innerHTML = '✓ Confident';
+            } else {
+                decEl.className = 'decision-badge decision-uncertain';
+                decEl.innerHTML = '⚠ Uncertain (Abstained)';
+            }
+
+            // Confidence
+            const pct = (data.confidence * 100).toFixed(1);
+            document.getElementById('res-conf-pct').innerText = `${pct}%`;
+            setTimeout(() => {
+                document.getElementById('res-bar').style.width = `${pct}%`;
+            }, 50);
+
+            // Top 3
+            const top3List = document.getElementById('top3-container');
+            top3List.innerHTML = '';
+            data.top_3.forEach((item, idx) => {
+                const itemPct = (item.confidence * 100).toFixed(1);
+                const speciesIcon = item.species === 'cat' ? '🐱' : '🐶';
+                const el = document.createElement('div');
+                el.className = 'top3-item';
+                el.innerHTML = `
+                    <div class="top3-info">
+                        <span>#${idx + 1} ${speciesIcon} ${formatBreedName(item.breed)}</span>
+                        <span>${itemPct}%</span>
+                    </div>
+                    <div class="top3-bar-bg">
+                        <div class="top3-bar-fill" style="width: ${itemPct}%"></div>
+                    </div>
+                `;
+                top3List.appendChild(el);
+            });
+
+            // Metadata
+            document.getElementById('res-model-ver').innerText = `Model: ${data.model_version}`;
+        }
+    </script>
+</body>
+</html>

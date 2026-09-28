@@ -6,13 +6,16 @@ import io
 import time
 from contextlib import asynccontextmanager
 from typing import Optional
+from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from pet_breed.config import (
     CHECKPOINTS_DIR,
+    DATA_DIR,
     DEFAULT_ABSTENTION_THRESHOLD,
     DEFAULT_NUM_CLASSES,
     EXPORTED_MODELS_DIR,
@@ -68,6 +71,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+STATIC_INDEX = Path(__file__).parent / "static" / "index.html"
+
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/ui", response_class=HTMLResponse)
+async def serve_ui():
+    """Serve the interactive Web UI for pet breed classification."""
+    if STATIC_INDEX.exists():
+        return FileResponse(STATIC_INDEX)
+    return HTMLResponse("<h2>Pet Breed Classifier UI is loading...</h2>")
+
+
+@app.get("/samples/{filename}")
+async def get_sample_image(filename: str):
+    """Serve sample pet images for instant 1-click browser testing."""
+    sample_path = DATA_DIR / "corrupted" / "brightness_shift_s1" / filename
+    if not sample_path.exists():
+        # Fallback search anywhere in data/
+        matches = list(DATA_DIR.rglob(filename))
+        if matches:
+            sample_path = matches[0]
+        else:
+            raise HTTPException(status_code=404, detail="Sample image not found.")
+    return FileResponse(sample_path, media_type="image/jpeg")
 
 
 @app.get("/health", response_model=HealthResponse, status_code=status.HTTP_200_OK)

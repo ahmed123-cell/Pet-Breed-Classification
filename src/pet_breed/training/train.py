@@ -232,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--freeze_backbone", action="store_true", default=False)
     parser.add_argument("--register", type=str, default=None)
     args = parser.parse_args()
 
@@ -241,5 +242,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         epochs=args.epochs,
         seed=args.seed,
+        freeze_backbone=args.freeze_backbone,
         register_model_name=args.register,
     )

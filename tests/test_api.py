@@ -103,3 +103,21 @@ def test_metrics_endpoint(client: TestClient):
     res = client.get("/metrics")
     assert res.status_code == 200
     assert "pet_breed_requests_total" in res.text
+
+
+def test_ui_and_samples_endpoints(client: TestClient):
+    """Verify / and /ui serve the HTML web interface and /samples serves test images."""
+    res_root = client.get("/")
+    assert res_root.status_code == 200
+    assert "text/html" in res_root.headers.get("content-type", "")
+    assert "Pet Breed Classification AI" in res_root.text
+
+    res_ui = client.get("/ui")
+    assert res_ui.status_code == 200
+    assert "Pet Breed Classification AI" in res_ui.text
+
+    # Verify sample image route
+    res_sample = client.get("/samples/Bengal_2.jpg")
+    assert res_sample.status_code == 200
+    assert "image/jpeg" in res_sample.headers.get("content-type", "")
+

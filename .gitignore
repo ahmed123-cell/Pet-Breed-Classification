@@ -32,6 +32,8 @@ data/images/
 data/annotations/
 data/corrupted/
 data/raw/
+data/torchvision_oxford/
+*.part
 models/checkpoints/
 models/exported/
 *.pth
