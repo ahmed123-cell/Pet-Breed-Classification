@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from pet_breed.serving.app import app
 
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as test_client:

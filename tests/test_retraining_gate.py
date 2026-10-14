@@ -6,6 +6,7 @@ import pytest
 from pet_breed.retraining.quality_gate import evaluate_quality_gate
 
 
+
 def test_quality_gate_promotes_meeting_threshold():
     """Verify quality gate promotes candidate if top1 >= prod - 0.01."""
     prod_top1 = 0.9140

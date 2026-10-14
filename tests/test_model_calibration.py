@@ -40,6 +40,7 @@ def test_temperature_scaler_optimization():
     assert ece_cal <= ece_uncal + 1e-4, "Temperature scaling should improve or preserve calibration error"
 
 
+
 def test_abstention_metrics():
     """Verify abstention policy correctly computes coverage and selective accuracy."""
     probs = np.array([

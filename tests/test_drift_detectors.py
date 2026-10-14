@@ -12,6 +12,7 @@ from pet_breed.monitoring.embedding_detector import EmbeddingDriftDetector
 from pet_breed.monitoring.pixel_detector import CheapPixelDriftDetector
 
 
+
 def test_cheap_pixel_detector_detects_severe_blur():
     """Verify CheapPixelDriftDetector catches severe blur."""
     ref_imgs = [Image.new("RGB", (100, 100), color=(i, i + 10, i + 20)) for i in range(20)]
