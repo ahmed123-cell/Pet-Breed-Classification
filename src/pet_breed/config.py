@@ -3,10 +3,19 @@ Central configuration for Pet Breed Classification MLOps System.
 """
 
 import json
+import os
 from pathlib import Path
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# Project root directory.
+# When the package is installed into site-packages (e.g. inside Docker via
+# `pip install .`), resolving relative to __file__ lands inside site-packages,
+# not the application root.  Allow an explicit override via APP_ROOT so that
+# the Docker WORKDIR (/app) is used as the authoritative root.
+PROJECT_ROOT = (
+    Path(os.environ["APP_ROOT"])
+    if "APP_ROOT" in os.environ
+    else Path(__file__).resolve().parent.parent.parent
+)
 
 # Data Paths
 DATA_DIR = PROJECT_ROOT / "data"
