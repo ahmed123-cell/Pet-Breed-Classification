@@ -47,8 +47,9 @@ async def lifespan(app: FastAPI):
     if not weights_path.exists():
         raise RuntimeError(
             f"Trained model checkpoint not found at {EXPORTED_MODELS_DIR / 'resnet50_calibrated.pth'} "
-            f"or {CHECKPOINTS_DIR / 'resnet50_best.pth'}. "
-            "Please run 'python scripts/bootstrap_models.py' or 'dvc repro' to obtain the 37-class checkpoint before starting."
+            f"or {CHECKPOINTS_DIR / 'resnet50_best.pth'}.\n"
+            "Please run 'python scripts/download_models.py' to download the verified 37-class model (90.3 MB), "
+            "or download directly from: https://github.com/ahmed123-cell/Pet-Breed-Classification/releases/download/v1.0.0/resnet50_calibrated.pth"
         )
 
     classifier = PetBreedClassifier(

@@ -18,8 +18,8 @@ git clone https://github.com/ahmed123-cell/Pet-Breed-Classification.git
 cd Pet-Breed-Classification
 pip install -e ".[dev,optimization,serving,monitoring]"
 
-# 2. Bootstrap verified 37-class model artifacts (Public, Offline)
-python scripts/bootstrap_models.py
+# 2. Download verified 37-class trained model checkpoints (Public CDN, 90.3 MB)
+python scripts/download_models.py
 
 # 3. Run automated test suite (18 tests passing)
 pytest tests/ -v
@@ -29,8 +29,9 @@ docker compose up -d
 ```
 
 > [!NOTE]
-> **Public vs. Private Credentials**:
-> - **Public Reproduction**: Anyone can clone the repo, run `python scripts/bootstrap_models.py`, run `pytest tests/ -v`, or run `dvc repro` locally without any credentials.
+> **Model Checkpoint Distribution & Verification**:
+> - **Public Download**: Official trained checkpoints are hosted on GitHub Releases (`v1.0.0`) and can be downloaded with automated SHA256 checksum and PyTorch graph integrity verification via `python scripts/download_models.py`.
+> - **No Random Weights**: Clean clones do not silently synthesize random weights for inference. If checkpoints are missing at runtime, the API and scripts fail with exact instructions to download the official trained checkpoint.
 > - **Private Cloud DVC Remote**: Pulling from cloud-backed DVC remotes (e.g., GCP Storage / AWS S3) is restricted to CI/CD and deployment pipelines via `dvc pull` (requiring cloud service account credentials).
 
 ---
@@ -197,10 +198,31 @@ Every promoted model artifact has direct provenance tracked in MLflow:
 - **Experiment Name**: `pet-breed-classification`
 - **Promoted ResNet-50 Run ID**: `72e9125c55b64810992c66459a8daf3b`
 - **Registered Model**: `PetBreedClassifier`
-- **Committed Model Artifact**: `models/exported/resnet50_calibrated.pth`
+- **Model Checkpoint**: `models/exported/resnet50_calibrated.pth`
 - **Architecture**: `PetClassifierBackbone` (ResNet-50 with 37-class linear head)
 - **Calibration Parameters**: Learned Temperature $T = 0.2779$, Abstention Threshold $\tau = 0.65$
 - **Dataset Contract**: 37 alphabetically sorted classes from committed `data/labels.json`
+
+### Public Model Checkpoint Downloads & Integrity
+
+The production model artifacts are publicly hosted on GitHub Release `v1.0.0` for verifiable peer review:
+
+| Artifact | Size | SHA256 Checksum | Public Direct URL |
+| :--- | :---: | :---: | :--- |
+| `resnet50_calibrated.pth` | 90.3 MB | `d02a755d3e92025e9969b2c08176afb1bc183a783bbf773238f7cf51363dabca` | [Download](https://github.com/ahmed123-cell/Pet-Breed-Classification/releases/download/v1.0.0/resnet50_calibrated.pth) |
+| `resnet50_best.pth` | 90.3 MB | `3258b2b5eeea44a5696eda73bd37945d579be236527bfb326cf5817fe64c90f2` | [Download](https://github.com/ahmed123-cell/Pet-Breed-Classification/releases/download/v1.0.0/resnet50_best.pth) |
+
+To download and automatically verify all checkpoints into their expected project paths:
+```bash
+python scripts/download_models.py
+```
+
+Or download manually via `curl`:
+```bash
+mkdir -p models/exported models/checkpoints
+curl -L -o models/exported/resnet50_calibrated.pth https://github.com/ahmed123-cell/Pet-Breed-Classification/releases/download/v1.0.0/resnet50_calibrated.pth
+curl -L -o models/checkpoints/resnet50_best.pth https://github.com/ahmed123-cell/Pet-Breed-Classification/releases/download/v1.0.0/resnet50_best.pth
+```
 
 ---
 
