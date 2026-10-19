@@ -54,6 +54,7 @@ def export_to_onnx(
         input_names=["input"],
         output_names=["logits"],
         dynamic_axes=dyn_axes_config,
+        dynamo=False,  # Force legacy TorchScript exporter; PyTorch>=2.9 defaults dynamo=True which requires onnxscript
     )
 
     # Validate ONNX graph integrity

@@ -67,11 +67,14 @@ def test_manifest_schema_and_split_isolation():
         ), f"Class '{breed}' has only {count} training images (expected >= 1)"
 
     # Check first 50 sample paths exist and dimensions >= 32x32
-    for r in records[:50]:
-        img_path = PROJECT_ROOT / r["path"]
-        assert img_path.exists(), f"Image path does not exist: {img_path}"
-        with Image.open(img_path) as img:
-            w, h = img.size
-            assert (
-                w >= 32 and h >= 32
-            ), f"Image {img_path} is smaller than 32x32: ({w}, {h})"
+    # Only run when the raw images directory is present (skipped in CI where images are not committed).
+    images_dir = PROJECT_ROOT / "data" / "images"
+    if images_dir.exists():
+        for r in records[:50]:
+            img_path = PROJECT_ROOT / r["path"]
+            assert img_path.exists(), f"Image path does not exist: {img_path}"
+            with Image.open(img_path) as img:
+                w, h = img.size
+                assert (
+                    w >= 32 and h >= 32
+                ), f"Image {img_path} is smaller than 32x32: ({w}, {h})"
