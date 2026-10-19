@@ -4,22 +4,24 @@ Unit tests for drift detectors (Cheap Pixel, Embedding MMD, Confidence KS).
 
 import numpy as np
 from PIL import Image
-import pytest
 
-from pet_breed.data.corruptions import apply_brightness_shift, apply_gaussian_blur
+from pet_breed.data.corruptions import apply_brightness_shift
 from pet_breed.monitoring.confidence_detector import ConfidenceDriftDetector
 from pet_breed.monitoring.embedding_detector import EmbeddingDriftDetector
 from pet_breed.monitoring.pixel_detector import CheapPixelDriftDetector
 
 
-
 def test_cheap_pixel_detector_detects_severe_blur():
     """Verify CheapPixelDriftDetector catches severe blur."""
-    ref_imgs = [Image.new("RGB", (100, 100), color=(i, i + 10, i + 20)) for i in range(20)]
+    ref_imgs = [
+        Image.new("RGB", (100, 100), color=(i, i + 10, i + 20)) for i in range(20)
+    ]
     detector = CheapPixelDriftDetector(ref_imgs)
 
     # Clean batch -> no drift
-    clean_batch = [Image.new("RGB", (100, 100), color=(i + 2, i + 12, i + 22)) for i in range(20)]
+    clean_batch = [
+        Image.new("RGB", (100, 100), color=(i + 2, i + 12, i + 22)) for i in range(20)
+    ]
     clean_res = detector.score_batch(clean_batch)
     assert not clean_res["drift_detected"]
 

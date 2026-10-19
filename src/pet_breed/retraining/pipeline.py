@@ -3,14 +3,11 @@ Automated closed-loop retraining pipeline triggered by drift alerts.
 Fine-tunes model on drifting data distribution and enforces production quality gate.
 """
 
-from pathlib import Path
-from typing import Dict, Optional
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import ConcatDataset, DataLoader
 
 from pet_breed.config import (
-    CHECKPOINTS_DIR,
     DEFAULT_BATCH_SIZE,
     DEFAULT_NUM_CLASSES,
     EXPORTED_MODELS_DIR,
@@ -29,15 +26,15 @@ def run_retraining_trigger(
     fine_tune_epochs: int = 3,
     lr: float = 5e-5,
     production_top1: float = 0.9140,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Execute closed-loop retraining triggered by drift alert.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n=======================================================")
-    print(f" DRIFT ALERT TRIGGERED: Retraining Pipeline Initiated")
+    print("\n=======================================================")
+    print(" DRIFT ALERT TRIGGERED: Retraining Pipeline Initiated")
     print(f" Detected Drift Domain: {corruption_trigger} (Severity {severity})")
-    print(f"=======================================================\n")
+    print("=======================================================\n")
 
     # 1. Prepare Augmented Dataset including detected drift samples
     train_clean_ds = PetBreedDataset(split="train", transform=get_train_transform())
@@ -61,7 +58,9 @@ def run_retraining_trigger(
 
     # 2. Load Current Production Baseline
     prod_checkpoint = EXPORTED_MODELS_DIR / "resnet50_calibrated.pth"
-    model = get_model(backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
+    model = get_model(
+        backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True
+    )
     if prod_checkpoint.exists():
         state = torch.load(prod_checkpoint, map_location=device)
         model.load_state_dict(state.get("state_dict", state), strict=False)
@@ -82,12 +81,16 @@ def run_retraining_trigger(
             loss.backward()
             optimizer.step()
             total_loss += loss.item() * len(labels)
-        print(f"Retrain Epoch {epoch}/{fine_tune_epochs} | Loss: {total_loss/len(combined_train_ds):.4f}")
+        print(
+            f"Retrain Epoch {epoch}/{fine_tune_epochs} | Loss: {total_loss/len(combined_train_ds):.4f}"
+        )
 
     # 4. Evaluate Candidate on Holdout Validation
     candidate_metrics = evaluate_model(model, val_loader, device)
     candidate_top1 = candidate_metrics["top1"]
-    print(f"Retrained Candidate Top-1: {candidate_top1:.4f} (Production Target: {production_top1:.4f})")
+    print(
+        f"Retrained Candidate Top-1: {candidate_top1:.4f} (Production Target: {production_top1:.4f})"
+    )
 
     # 5. Production Quality Gate Check
     passed, gate_result = evaluate_quality_gate(

@@ -3,12 +3,12 @@ Quantization-Aware Training (QAT) pipeline.
 Simulates low-precision INT8 quantization forward noise during training for superior accuracy retention.
 """
 
-from pathlib import Path
-from typing import Dict
 import copy
+from pathlib import Path
+
 import torch
-import torch.ao.quantization as quantization
-import torch.nn as nn
+from torch import nn
+from torch.ao import quantization
 from torch.utils.data import DataLoader
 
 from pet_breed.config import (
@@ -28,7 +28,7 @@ def prepare_qat_model(model: nn.Module) -> nn.Module:
     """
     model_qat = copy.deepcopy(model)
     model_qat.eval()
-    
+
     # Configure quantization backend for x86 / ARM
     model_qat.qconfig = quantization.get_default_qat_qconfig("fbgemm")
     prepared_model = quantization.prepare_qat(model_qat, inplace=False)
@@ -39,7 +39,7 @@ def run_qat_experiment(
     checkpoint_path: Path,
     epochs: int = 2,
     lr: float = 1e-5,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Execute Quantization-Aware Training fine-tuning and convert to quantized model.
     """
@@ -47,7 +47,9 @@ def run_qat_experiment(
     print(f"\n--- Running Quantization-Aware Training (QAT) for {epochs} epochs ---")
 
     # Load base model
-    base_model = get_model(backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False)
+    base_model = get_model(
+        backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False
+    )
     if checkpoint_path.exists():
         state = torch.load(checkpoint_path, map_location=device)
         state_dict = state.get("state_dict", state.get("model_state_dict", state))
@@ -86,7 +88,9 @@ def run_qat_experiment(
 
     # Evaluate INT8 QAT model
     qat_eval = evaluate_model(quantized_model, val_loader, device)
-    print(f"QAT INT8 Top-1: {qat_eval['top1']:.4f} | Accuracy Delta vs FP32: {qat_eval['top1'] - base_eval['top1']:+.4f}")
+    print(
+        f"QAT INT8 Top-1: {qat_eval['top1']:.4f} | Accuracy Delta vs FP32: {qat_eval['top1'] - base_eval['top1']:+.4f}"
+    )
 
     # Save QAT artifact
     save_path = EXPORTED_MODELS_DIR / "resnet50_qat.pth"

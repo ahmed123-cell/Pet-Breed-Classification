@@ -4,11 +4,9 @@ confidence score distributions, and drift detection scores.
 """
 
 from prometheus_client import (
-    CONTENT_TYPE_LATEST,
     Counter,
     Gauge,
     Histogram,
-    Summary,
     generate_latest,
 )
 

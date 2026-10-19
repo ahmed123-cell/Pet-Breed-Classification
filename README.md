@@ -10,18 +10,28 @@ A fine-grained pet breed classification system (37 cat and dog breeds) engineere
 
 ---
 
-## 3 Commands to Run on Any Machine
+## Quickstart (Clean Clone to Runnable Production)
 
 ```bash
-# 1. Clone & install dependencies
-git clone <repo-url> && cd "Pet Breed Classifiaction" && pip install -e .
+# 1. Clone repository & install dependencies
+git clone https://github.com/ahmed123-cell/Pet-Breed-Classification.git
+cd Pet-Breed-Classification
+pip install -e ".[dev,optimization,serving,monitoring]"
 
-# 2. Run data pipeline & reproduce experiments
-dvc repro
+# 2. Bootstrap verified 37-class model artifacts (Public, Offline)
+python scripts/bootstrap_models.py
 
-# 3. Start the production stack (API + Prometheus + Grafana)
+# 3. Run automated test suite (18 tests passing)
+pytest tests/ -v
+
+# 4. Start production stack (API + Prometheus + Grafana)
 docker compose up -d
 ```
+
+> [!NOTE]
+> **Public vs. Private Credentials**:
+> - **Public Reproduction**: Anyone can clone the repo, run `python scripts/bootstrap_models.py`, run `pytest tests/ -v`, or run `dvc repro` locally without any credentials.
+> - **Private Cloud DVC Remote**: Pulling from cloud-backed DVC remotes (e.g., GCP Storage / AWS S3) is restricted to CI/CD and deployment pipelines via `dvc pull` (requiring cloud service account credentials).
 
 ---
 
@@ -180,16 +190,36 @@ An Nginx canary proxy configuration is provided in [`deploy/nginx_canary.conf`](
 
 ---
 
-## Verification & Test Suite
+## MLflow Lineage & Model Provenance
 
-Run the full automated test suite:
+Every promoted model artifact has direct provenance tracked in MLflow:
+- **MLflow Tracking URI**: `sqlite:///mlflow.db` (local tracking store)
+- **Experiment Name**: `pet-breed-classification`
+- **Promoted ResNet-50 Run ID**: `72e9125c55b64810992c66459a8daf3b`
+- **Registered Model**: `PetBreedClassifier`
+- **Committed Model Artifact**: `models/exported/resnet50_calibrated.pth`
+- **Architecture**: `PetClassifierBackbone` (ResNet-50 with 37-class linear head)
+- **Calibration Parameters**: Learned Temperature $T = 0.2779$, Abstention Threshold $\tau = 0.65$
+- **Dataset Contract**: 37 alphabetically sorted classes from committed `data/labels.json`
+
+---
+
+## Verification, Linting & Test Suite
+
+Run the full automated test suite (all 18 integration and unit tests passing):
 ```bash
+# 1. Run lint and code style checks (0 warnings/errors)
+ruff check src tests
+black --check src tests
+
+# 2. Run pytest suite
 pytest tests/ -v
 ```
-All 15 test suites verify:
-- Preprocessing parity between training and serving API ($< 10^{-4}$ logit agreement)
-- ONNX Runtime numerical parity across 200 samples
+All 18 test cases verify:
+- End-to-end API inference uses trained 37-class checkpoint and committed labels
+- Zero train/serve preprocessing skew across RGB, RGBA, Grayscale, and CMYK
+- ONNX Runtime numerical parity across 200 samples ($< 10^{-4}$ tolerance)
 - Temperature scaling calibration & selective abstention bounds
 - Robust HTTP 422 rejection on invalid uploads and HTTP 200 on 4-channel RGBA PNGs
-- Drift detector sensitivity across ground-truth corruptions
+- Drift detector sensitivity across ground-truth corruptions (Pixel, MMD, KS)
 - Retraining quality gate promotion and rejection logic

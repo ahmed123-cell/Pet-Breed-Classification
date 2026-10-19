@@ -4,11 +4,10 @@ to MobileNetV3-Small (Student, ~2.5M params).
 """
 
 from pathlib import Path
-from typing import Dict
+
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
+from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -42,10 +41,10 @@ class DistillationLoss(nn.Module):
         labels: torch.Tensor,
     ) -> torch.Tensor:
         hard_loss = self.ce_loss(student_logits, labels)
-        
+
         soft_student = F.log_softmax(student_logits / self.temperature, dim=-1)
         soft_teacher = F.softmax(teacher_logits / self.temperature, dim=-1)
-        soft_loss = self.kl_div(soft_student, soft_teacher) * (self.temperature ** 2)
+        soft_loss = self.kl_div(soft_student, soft_teacher) * (self.temperature**2)
 
         return self.alpha * hard_loss + (1.0 - self.alpha) * soft_loss
 
@@ -56,15 +55,19 @@ def run_distillation(
     lr: float = 3e-4,
     temperature: float = 3.0,
     alpha: float = 0.5,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Train MobileNetV3-Small student guided by ResNet-50 teacher logits.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n--- Running Knowledge Distillation: ResNet-50 -> MobileNetV3-Small (T={temperature}, alpha={alpha}) ---")
+    print(
+        f"\n--- Running Knowledge Distillation: ResNet-50 -> MobileNetV3-Small (T={temperature}, alpha={alpha}) ---"
+    )
 
     # Load Teacher (ResNet-50)
-    teacher = get_model(backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False)
+    teacher = get_model(
+        backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False
+    )
     if teacher_checkpoint.exists():
         state = torch.load(teacher_checkpoint, map_location=device)
         state_dict = state.get("state_dict", state.get("model_state_dict", state))
@@ -75,7 +78,11 @@ def run_distillation(
         param.requires_grad = False
 
     # Initialize Student (MobileNetV3-Small)
-    student = get_model(backbone_name="mobilenet_v3_small", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
+    student = get_model(
+        backbone_name="mobilenet_v3_small",
+        num_classes=DEFAULT_NUM_CLASSES,
+        pretrained=True,
+    )
     student.to(device)
 
     # Datasets
@@ -98,7 +105,9 @@ def run_distillation(
         student.train()
         total_loss = 0.0
 
-        for images, labels, _ in tqdm(train_loader, desc=f"Distill Epoch {epoch}/{epochs}"):
+        for images, labels, _ in tqdm(
+            train_loader, desc=f"Distill Epoch {epoch}/{epochs}"
+        ):
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
 
@@ -113,7 +122,9 @@ def run_distillation(
 
         scheduler.step()
         val_eval = evaluate_model(student, val_loader, device)
-        print(f"Epoch {epoch}/{epochs} | Distill Loss: {total_loss/len(train_ds):.4f} | Student Top-1: {val_eval['top1']:.4f}")
+        print(
+            f"Epoch {epoch}/{epochs} | Distill Loss: {total_loss/len(train_ds):.4f} | Student Top-1: {val_eval['top1']:.4f}"
+        )
 
         if val_eval["top1"] >= best_student_acc:
             best_student_acc = val_eval["top1"]
@@ -123,7 +134,9 @@ def run_distillation(
         student.load_state_dict(best_student_state)
 
     final_student_eval = evaluate_model(student, val_loader, device)
-    print(f"Final Distilled Student Top-1: {final_student_eval['top1']:.4f} (Teacher: {teacher_eval['top1']:.4f})")
+    print(
+        f"Final Distilled Student Top-1: {final_student_eval['top1']:.4f} (Teacher: {teacher_eval['top1']:.4f})"
+    )
 
     save_path = EXPORTED_MODELS_DIR / "mobilenetv3_small_distilled.pth"
     torch.save(

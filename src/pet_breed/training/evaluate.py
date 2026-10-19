@@ -2,11 +2,10 @@
 Evaluation metrics computation: Top-1 accuracy, Macro F1, ECE, Coverage, and Selective Accuracy.
 """
 
-from typing import Dict, Tuple
 import numpy as np
-from sklearn.metrics import f1_score
 import torch
-import torch.nn as nn
+from sklearn.metrics import f1_score
+from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -19,7 +18,7 @@ def collect_logits_and_labels(
     model: nn.Module,
     dataloader: DataLoader,
     device: torch.device,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Pass all samples through model to collect full logits tensor and ground truth labels.
     """
@@ -44,7 +43,7 @@ def evaluate_model(
     device: torch.device,
     temperature: float = 1.0,
     abstention_threshold: float = 0.65,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Comprehensive evaluation returning:
     - top1: Top-1 Accuracy
@@ -65,7 +64,9 @@ def evaluate_model(
 
     # Temperature scaled probabilities
     scaled_logits_np = logits_np / max(temperature, 1e-6)
-    scaled_exp = np.exp(scaled_logits_np - np.max(scaled_logits_np, axis=1, keepdims=True))
+    scaled_exp = np.exp(
+        scaled_logits_np - np.max(scaled_logits_np, axis=1, keepdims=True)
+    )
     calibrated_probs = scaled_exp / np.sum(scaled_exp, axis=1, keepdims=True)
 
     # Top-1 & Macro F1

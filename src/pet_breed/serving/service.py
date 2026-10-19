@@ -2,12 +2,18 @@
 BentoML Service definition with micro-batching runner.
 """
 
-from typing import Any, Dict, List
-from PIL import Image
-import bentoml
-from bentoml.io import Image as BentoImage, JSON
+from typing import Any
 
-from pet_breed.config import DEFAULT_ABSTENTION_THRESHOLD, DEFAULT_NUM_CLASSES, MODEL_VERSION
+import bentoml
+from bentoml.io import JSON
+from bentoml.io import Image as BentoImage
+from PIL import Image
+
+from pet_breed.config import (
+    DEFAULT_ABSTENTION_THRESHOLD,
+    DEFAULT_NUM_CLASSES,
+    MODEL_VERSION,
+)
 from pet_breed.models.classifier import PetBreedClassifier
 
 # Global classifier instance
@@ -28,7 +34,7 @@ class PetBreedBentoService:
         self.classifier = classifier
 
     @bentoml.api(batchable=True, batch_dim=0)
-    def predict(self, images: List[Image.Image]) -> List[Dict[str, Any]]:
+    def predict(self, images: list[Image.Image]) -> list[dict[str, Any]]:
         """
         Batchable inference endpoint supporting dynamic micro-batching.
         """
@@ -44,5 +50,5 @@ svc = bentoml.Service("pet_breed_service")
 
 
 @svc.api(input=BentoImage(), output=JSON())
-def predict(image: Image.Image) -> Dict[str, Any]:
+def predict(image: Image.Image) -> dict[str, Any]:
     return classifier.predict(image)

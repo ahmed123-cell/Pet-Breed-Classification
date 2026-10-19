@@ -2,9 +2,8 @@
 Central configuration for Pet Breed Classification MLOps System.
 """
 
-from pathlib import Path
-from typing import List, Dict
 import json
+from pathlib import Path
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -42,21 +41,21 @@ DEFAULT_ABSTENTION_THRESHOLD = 0.65
 MODEL_VERSION = "v1.0.0"
 
 
-def load_label_map() -> Dict[str, any]:
+def load_label_map() -> dict[str, any]:
     """Load sorted classes and species mapping from committed labels.json."""
     if not LABELS_PATH.exists():
         raise FileNotFoundError(f"Label map not found at {LABELS_PATH}")
-    with open(LABELS_PATH, "r", encoding="utf-8") as f:
+    with open(LABELS_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
-def get_class_names() -> List[str]:
+def get_class_names() -> list[str]:
     """Get the 37 sorted class names."""
     data = load_label_map()
     return data["classes"]
 
 
-def get_species_map() -> Dict[str, str]:
+def get_species_map() -> dict[str, str]:
     """Get mapping from class name to 'cat' or 'dog'."""
     data = load_label_map()
     return data["species_map"]

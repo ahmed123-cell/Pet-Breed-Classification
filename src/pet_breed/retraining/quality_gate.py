@@ -3,7 +3,6 @@ Production Model Quality Gate.
 Asserts that retrained candidate models satisfy Top-1 >= Production - 0.01 before promotion.
 """
 
-from typing import Dict, Tuple
 from pet_breed.training.mlflow_tracker import promote_model_to_production
 
 
@@ -11,7 +10,7 @@ def evaluate_quality_gate(
     candidate_top1: float,
     production_top1: float,
     tolerance: float = 0.01,
-) -> Tuple[bool, Dict[str, any]]:
+) -> tuple[bool, dict[str, any]]:
     """
     Evaluate candidate model performance against current production baseline.
     Rule: Promoted only if candidate_top1 >= production_top1 - tolerance
@@ -30,12 +29,18 @@ def evaluate_quality_gate(
     }
 
     if passed:
-        print(f"[QUALITY GATE PASS] Candidate Top-1 ({candidate_top1:.4f}) >= Threshold ({threshold:.4f}). Promoting.")
+        print(
+            f"[QUALITY GATE PASS] Candidate Top-1 ({candidate_top1:.4f}) >= Threshold ({threshold:.4f}). Promoting."
+        )
         try:
-            promote_model_to_production(model_name="PetBreedClassifier", stage="Production")
+            promote_model_to_production(
+                model_name="PetBreedClassifier", stage="Production"
+            )
         except Exception as e:
             print(f"MLflow registry update note: {e}")
     else:
-        print(f"[QUALITY GATE FAIL] Candidate Top-1 ({candidate_top1:.4f}) < Threshold ({threshold:.4f}). Retaining current production model.")
+        print(
+            f"[QUALITY GATE FAIL] Candidate Top-1 ({candidate_top1:.4f}) < Threshold ({threshold:.4f}). Retaining current production model."
+        )
 
     return passed, result

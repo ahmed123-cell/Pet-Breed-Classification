@@ -6,8 +6,6 @@ Evaluates:
 - Detection sensitivity per severity level (1, 2, 3)
 """
 
-from pathlib import Path
-from typing import Dict, List
 import numpy as np
 import torch
 from tabulate import tabulate
@@ -27,7 +25,7 @@ def build_detector_scorecard(
     model: torch.nn.Module,
     device: torch.device,
     sample_limit: int = 150,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Run evaluation of Cheap Statistical, Embedding MMD, and Confidence detectors against ground-truth corruption scenarios.
     """
@@ -36,14 +34,14 @@ def build_detector_scorecard(
 
     # 1. Reference Clean Validation Set
     val_ds = PetBreedDataset(split="val", transform=None)
-    val_images = [PetBreedDataset(split="val", transform=None)[i][0] for i in range(min(sample_limit, len(val_ds)))]
     # Convert PIL images for pixel detector
     from PIL import Image
-    from torchvision.transforms.functional import to_pil_image
+
     pil_ref_images = []
     for i in range(min(sample_limit, len(val_ds))):
         rec = val_ds.records[i]
         from pet_breed.config import PROJECT_ROOT
+
         with Image.open(PROJECT_ROOT / rec["path"]) as img:
             pil_ref_images.append(img.convert("RGB"))
 
@@ -54,7 +52,7 @@ def build_detector_scorecard(
         batch_size=32,
         shuffle=False,
     )
-    
+
     ref_embeds = []
     ref_confs = []
     model.eval()
@@ -62,7 +60,11 @@ def build_detector_scorecard(
         for imgs, _, _ in val_loader:
             imgs = imgs.to(device)
             emb = model.extract_features(imgs).cpu().numpy()
-            logits = model.head(model.extract_features(imgs)) if hasattr(model, "head") else model(imgs)
+            logits = (
+                model.head(model.extract_features(imgs))
+                if hasattr(model, "head")
+                else model(imgs)
+            )
             probs = torch.softmax(logits, dim=-1).cpu().numpy()
             ref_embeds.append(emb)
             ref_confs.append(np.max(probs, axis=1))
@@ -83,6 +85,7 @@ def build_detector_scorecard(
     for i in range(min(sample_limit, len(clean_test_ds))):
         rec = clean_test_ds.records[i]
         from pet_breed.config import PROJECT_ROOT
+
         with Image.open(PROJECT_ROOT / rec["path"]) as img:
             clean_pil_images.append(img.convert("RGB"))
 
@@ -96,7 +99,11 @@ def build_detector_scorecard(
         for imgs, _, _ in clean_loader:
             imgs = imgs.to(device)
             emb = model.extract_features(imgs).cpu().numpy()
-            logits = model.head(model.extract_features(imgs)) if hasattr(model, "head") else model(imgs)
+            logits = (
+                model.head(model.extract_features(imgs))
+                if hasattr(model, "head")
+                else model(imgs)
+            )
             probs = torch.softmax(logits, dim=-1).cpu().numpy()
             c_embeds.append(emb)
             c_confs.append(np.max(probs, axis=1))
@@ -107,19 +114,29 @@ def build_detector_scorecard(
     res_emb = embed_detector.score_batch(c_embeds_np[:sample_limit])
     res_cnf = conf_detector.score_batch(c_confs_np[:sample_limit])
 
-    scorecard_rows.append({
-        "Scenario": "Clean Test (Baseline)",
-        "Severity": 0,
-        "Pixel Detector": "PASS (No Drift)" if not res_pix["drift_detected"] else "FALSE ALARM",
-        "Embedding MMD": "PASS (No Drift)" if not res_emb["drift_detected"] else "FALSE ALARM",
-        "Confidence KS": "PASS (No Drift)" if not res_cnf["drift_detected"] else "FALSE ALARM",
-        "Overall Ground Truth": "No Drift",
-    })
+    scorecard_rows.append(
+        {
+            "Scenario": "Clean Test (Baseline)",
+            "Severity": 0,
+            "Pixel Detector": (
+                "PASS (No Drift)" if not res_pix["drift_detected"] else "FALSE ALARM"
+            ),
+            "Embedding MMD": (
+                "PASS (No Drift)" if not res_emb["drift_detected"] else "FALSE ALARM"
+            ),
+            "Confidence KS": (
+                "PASS (No Drift)" if not res_cnf["drift_detected"] else "FALSE ALARM"
+            ),
+            "Overall Ground Truth": "No Drift",
+        }
+    )
 
     # 3. Test Corrupted Sets
     for corr in CORRUPTION_TYPES:
         for sev in [1, 2, 3]:
-            corr_ds = PetBreedDataset(split="test_corrupted", corruption=corr, severity=sev, transform=None)
+            corr_ds = PetBreedDataset(
+                split="test_corrupted", corruption=corr, severity=sev, transform=None
+            )
             if len(corr_ds) == 0:
                 continue
 
@@ -127,11 +144,17 @@ def build_detector_scorecard(
             for i in range(min(sample_limit, len(corr_ds))):
                 rec = corr_ds.records[i]
                 from pet_breed.config import PROJECT_ROOT
+
                 with Image.open(PROJECT_ROOT / rec["path"]) as img:
                     corr_pils.append(img.convert("RGB"))
 
             corr_loader = DataLoader(
-                PetBreedDataset(split="test_corrupted", corruption=corr, severity=sev, transform=eval_transform),
+                PetBreedDataset(
+                    split="test_corrupted",
+                    corruption=corr,
+                    severity=sev,
+                    transform=eval_transform,
+                ),
                 batch_size=32,
                 shuffle=False,
             )
@@ -140,7 +163,11 @@ def build_detector_scorecard(
                 for imgs, _, _ in corr_loader:
                     imgs = imgs.to(device)
                     emb = model.extract_features(imgs).cpu().numpy()
-                    logits = model.head(model.extract_features(imgs)) if hasattr(model, "head") else model(imgs)
+                    logits = (
+                        model.head(model.extract_features(imgs))
+                        if hasattr(model, "head")
+                        else model(imgs)
+                    )
                     probs = torch.softmax(logits, dim=-1).cpu().numpy()
                     cr_embeds.append(emb)
                     cr_confs.append(np.max(probs, axis=1))
@@ -151,23 +178,44 @@ def build_detector_scorecard(
             e_res = embed_detector.score_batch(cr_embeds_np[:sample_limit])
             c_res = conf_detector.score_batch(cr_confs_np[:sample_limit])
 
-            scorecard_rows.append({
-                "Scenario": corr,
-                "Severity": sev,
-                "Pixel Detector": "DETECTED" if p_res["drift_detected"] else "MISSED",
-                "Embedding MMD": "DETECTED" if e_res["drift_detected"] else "MISSED",
-                "Confidence KS": "DETECTED" if c_res["drift_detected"] else "MISSED",
-                "Overall Ground Truth": "Drift Present",
-            })
+            scorecard_rows.append(
+                {
+                    "Scenario": corr,
+                    "Severity": sev,
+                    "Pixel Detector": (
+                        "DETECTED" if p_res["drift_detected"] else "MISSED"
+                    ),
+                    "Embedding MMD": (
+                        "DETECTED" if e_res["drift_detected"] else "MISSED"
+                    ),
+                    "Confidence KS": (
+                        "DETECTED" if c_res["drift_detected"] else "MISSED"
+                    ),
+                    "Overall Ground Truth": "Drift Present",
+                }
+            )
 
-    headers = ["Scenario", "Severity", "Pixel Detector", "Embedding MMD", "Confidence KS", "Overall Ground Truth"]
-    table_fmt = tabulate([[r[h] for h in headers] for r in scorecard_rows], headers=headers, tablefmt="github")
+    headers = [
+        "Scenario",
+        "Severity",
+        "Pixel Detector",
+        "Embedding MMD",
+        "Confidence KS",
+        "Overall Ground Truth",
+    ]
+    table_fmt = tabulate(
+        [[r[h] for h in headers] for r in scorecard_rows],
+        headers=headers,
+        tablefmt="github",
+    )
 
     scorecard_md = "# Module 5: Drift Detector Scorecard & Ground-Truth Benchmark\n\n"
     scorecard_md += "Evaluating detectors across 5 corruption types and 3 severity levels against labeled ground truth.\n\n"
     scorecard_md += table_fmt + "\n\n"
     scorecard_md += "### Key Takeaways:\n"
-    scorecard_md += "1. **Clean Test Batches**: Zero false alarms on pristine test distribution.\n"
+    scorecard_md += (
+        "1. **Clean Test Batches**: Zero false alarms on pristine test distribution.\n"
+    )
     scorecard_md += "2. **Brightness & Blur**: Cheap pixel statistical detector catches low-level sensory shift instantly with zero GPU compute.\n"
     scorecard_md += "3. **JPEG & Motion Blur**: Embedding MMD detector detects semantic degradation where pixel distributions alone might be subtler.\n"
     scorecard_md += "4. **Confidence Drift**: Tracks model uncertainty deterioration under severity 2 and 3.\n"

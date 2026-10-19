@@ -4,14 +4,12 @@ Evidently AI Batch Data Drift and Performance Report Generator.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
-import numpy as np
+
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
 from pet_breed.config import (
-    DEFAULT_NUM_CLASSES,
     PROJECT_ROOT,
     REPORTS_DIR,
     SCORING_OUTPUT_DIR,
@@ -72,14 +70,14 @@ def generate_evidently_drift_report(
     Generate Evidently data drift HTML report.
     """
     output_html_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         try:
-            from evidently.report import Report
             from evidently.metric_preset import DataDriftPreset
+            from evidently.report import Report
         except ImportError:
-            from evidently.legacy.report import Report
             from evidently.legacy.metric_preset import DataDriftPreset
+            from evidently.legacy.report import Report
 
         report = Report(metrics=[DataDriftPreset()])
         report.run(reference_data=reference_data, current_data=current_data)

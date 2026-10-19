@@ -3,10 +3,11 @@ PyTorch Dataset implementation consuming the JSON manifest.
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
-from PIL import Image
+
 import torch
+from PIL import Image
 from torch.utils.data import Dataset
 
 from pet_breed.config import MANIFEST_PATH, PROJECT_ROOT
@@ -22,19 +23,19 @@ class PetBreedDataset(Dataset):
         self,
         manifest_path: Path = MANIFEST_PATH,
         split: str = "train",
-        corruption: Optional[str] = None,
-        severity: Optional[int] = None,
-        transform: Optional[Callable] = None,
+        corruption: str | None = None,
+        severity: int | None = None,
+        transform: Callable | None = None,
     ):
         self.manifest_path = Path(manifest_path)
         self.split = split
         self.transform = transform
 
-        with open(self.manifest_path, "r", encoding="utf-8") as f:
+        with open(self.manifest_path, encoding="utf-8") as f:
             all_records = json.load(f)
 
         # Filter by split and optional corruption/severity
-        self.records: List[Dict] = []
+        self.records: list[dict] = []
         for r in all_records:
             if split == "all" or r["split"] == split:
                 if corruption is not None and r.get("corruption") != corruption:
@@ -46,7 +47,7 @@ class PetBreedDataset(Dataset):
     def __len__(self) -> int:
         return len(self.records)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, str]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int, str]:
         record = self.records[idx]
         img_full_path = PROJECT_ROOT / record["path"]
 
@@ -58,6 +59,7 @@ class PetBreedDataset(Dataset):
             img_tensor = self.transform(img)
         else:
             from torchvision.transforms import functional as TF
+
             img_tensor = TF.to_tensor(img)
 
         target = record["class_index"]

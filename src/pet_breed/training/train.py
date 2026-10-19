@@ -4,12 +4,10 @@ Training, validation, temperature calibration, and MLflow tracking pipeline.
 
 import argparse
 import random
-from pathlib import Path
-from typing import Dict, Optional
+
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -69,14 +67,16 @@ def run_training_experiment(
     epochs: int = 5,
     seed: int = DEFAULT_SEED,
     freeze_backbone: bool = False,
-    register_model_name: Optional[str] = None,
-) -> Dict[str, any]:
+    register_model_name: str | None = None,
+) -> dict[str, any]:
     """
     Execute full training, calibration, and MLflow logging cycle for a backbone.
     """
     set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n--- Starting Experiment: {backbone} | LR: {lr} | Batch Size: {batch_size} | Device: {device} ---")
+    print(
+        f"\n--- Starting Experiment: {backbone} | LR: {lr} | Batch Size: {batch_size} | Device: {device} ---"
+    )
 
     # Datasets and Loaders
     train_ds = PetBreedDataset(split="train", transform=get_train_transform())
@@ -90,8 +90,10 @@ def run_training_experiment(
     )
 
     # Initialize model
-    model = get_model(backbone_name=backbone, num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
-    
+    model = get_model(
+        backbone_name=backbone, num_classes=DEFAULT_NUM_CLASSES, pretrained=True
+    )
+
     if freeze_backbone:
         for param in model.backbone.parameters():
             param.requires_grad = False
@@ -113,11 +115,13 @@ def run_training_experiment(
     for epoch in range(1, epochs + 1):
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
         scheduler.step()
-        
+
         # Validation accuracy check
         val_eval = evaluate_model(model, val_loader, device)
         val_acc = val_eval["top1"]
-        print(f"Epoch {epoch}/{epochs} | Train Loss: {train_loss:.4f} | Val Top-1: {val_acc:.4f} (F1: {val_eval['f1_macro']:.4f})")
+        print(
+            f"Epoch {epoch}/{epochs} | Train Loss: {train_loss:.4f} | Val Top-1: {val_acc:.4f} (F1: {val_eval['f1_macro']:.4f})"
+        )
 
         if val_acc >= best_val_acc:
             best_val_acc = val_acc
@@ -138,7 +142,7 @@ def run_training_experiment(
 
     print("\nFitting Temperature Scaling calibration on validation fold...")
     val_logits, val_labels = collect_logits_and_labels(model, val_loader, device)
-    
+
     scaler = TemperatureScaler()
     temperature = scaler.fit(val_logits, val_labels)
     print(f"Learned Optimal Temperature: {temperature:.4f}")
@@ -146,10 +150,10 @@ def run_training_experiment(
     # Compute uncalibrated and calibrated probabilities
     val_logits_np = val_logits.numpy()
     val_labels_np = val_labels.numpy()
-    
+
     uncal_exp = np.exp(val_logits_np - np.max(val_logits_np, axis=1, keepdims=True))
     uncal_probs = uncal_exp / np.sum(uncal_exp, axis=1, keepdims=True)
-    
+
     cal_logits_np = val_logits_np / max(temperature, 1e-6)
     cal_exp = np.exp(cal_logits_np - np.max(cal_logits_np, axis=1, keepdims=True))
     cal_probs = cal_exp / np.sum(cal_exp, axis=1, keepdims=True)
@@ -162,16 +166,27 @@ def run_training_experiment(
     if backbone == "resnet50":
         # Save standard reference report
         plot_reliability_diagrams(
-            uncal_probs, cal_probs, val_labels_np, save_path=REPORTS_DIR / "calibration.png"
+            uncal_probs,
+            cal_probs,
+            val_labels_np,
+            save_path=REPORTS_DIR / "calibration.png",
         )
 
     # Determine abstention threshold
-    optimal_th, abst_summary = find_optimal_threshold(cal_probs, val_labels_np, target_selective_accuracy=0.95)
-    print(f"Abstention Analysis at Threshold {optimal_th:.2f} -> Coverage: {abst_summary['coverage']:.2%}, Selective Acc: {abst_summary['selective_accuracy']:.2%}")
+    optimal_th, abst_summary = find_optimal_threshold(
+        cal_probs, val_labels_np, target_selective_accuracy=0.95
+    )
+    print(
+        f"Abstention Analysis at Threshold {optimal_th:.2f} -> Coverage: {abst_summary['coverage']:.2%}, Selective Acc: {abst_summary['selective_accuracy']:.2%}"
+    )
 
     # Comprehensive evaluation
     final_metrics = evaluate_model(
-        model, val_loader, device, temperature=temperature, abstention_threshold=optimal_th
+        model,
+        val_loader,
+        device,
+        temperature=temperature,
+        abstention_threshold=optimal_th,
     )
 
     # Export canonical weights

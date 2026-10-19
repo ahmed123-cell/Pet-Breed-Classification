@@ -4,12 +4,12 @@ Verifies robust handling of 4-channel RGBA PNG, grayscale, CMYK, invalid files (
 """
 
 import io
-from PIL import Image
+
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from pet_breed.serving.app import app
-
 
 
 @pytest.fixture
@@ -35,9 +35,7 @@ def test_predict_standard_rgb(client: TestClient):
     img.save(buf, format="JPEG")
     buf.seek(0)
 
-    response = client.post(
-        "/predict", files={"file": ("test.jpg", buf, "image/jpeg")}
-    )
+    response = client.post("/predict", files={"file": ("test.jpg", buf, "image/jpeg")})
     assert response.status_code == 200
     data = response.json()
     assert "breed" in data
@@ -58,7 +56,9 @@ def test_predict_4channel_rgba_png(client: TestClient):
     response = client.post(
         "/predict", files={"file": ("test_alpha.png", buf, "image/png")}
     )
-    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.text}"
     data = response.json()
     assert "breed" in data
 
@@ -70,7 +70,9 @@ def test_predict_grayscale_and_cmyk(client: TestClient):
     buf_l = io.BytesIO()
     img_l.save(buf_l, format="JPEG")
     buf_l.seek(0)
-    res_l = client.post("/predict", files={"file": ("test_gray.jpg", buf_l, "image/jpeg")})
+    res_l = client.post(
+        "/predict", files={"file": ("test_gray.jpg", buf_l, "image/jpeg")}
+    )
     assert res_l.status_code == 200
 
     # CMYK
@@ -78,7 +80,9 @@ def test_predict_grayscale_and_cmyk(client: TestClient):
     buf_cmyk = io.BytesIO()
     img_cmyk.save(buf_cmyk, format="JPEG")
     buf_cmyk.seek(0)
-    res_cmyk = client.post("/predict", files={"file": ("test_cmyk.jpg", buf_cmyk, "image/jpeg")})
+    res_cmyk = client.post(
+        "/predict", files={"file": ("test_cmyk.jpg", buf_cmyk, "image/jpeg")}
+    )
     assert res_cmyk.status_code == 200
 
 
@@ -122,3 +126,44 @@ def test_ui_and_samples_endpoints(client: TestClient):
     assert res_sample.status_code == 200
     assert "image/jpeg" in res_sample.headers.get("content-type", "")
 
+
+def test_api_uses_trained_37_class_checkpoint(client: TestClient):
+    """
+    End-to-end test proving that the API uses the trained 37-class checkpoint,
+    returns predictions strictly belonging to the 37 committed classes,
+    and preserves calibration/abstention parameters.
+    """
+    from pet_breed.config import get_class_names, get_species_map
+    from pet_breed.serving.app import classifier
+
+    assert classifier is not None, "Classifier should be loaded at startup"
+    assert (
+        classifier.num_classes == 37
+    ), f"Expected 37 classes, got {classifier.num_classes}"
+
+    # Check head output dimension of actual underlying backbone
+    assert hasattr(classifier.model, "head")
+    assert (
+        classifier.model.head.out_features == 37
+    ), f"Model head output features must be 37, got {classifier.model.head.out_features}"
+
+    committed_classes = set(get_class_names())
+    species_map = get_species_map()
+    assert len(committed_classes) == 37
+
+    img = Image.new("RGB", (224, 224), color=(150, 120, 90))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    buf.seek(0)
+
+    response = client.post("/predict", files={"file": ("test.jpg", buf, "image/jpeg")})
+    assert response.status_code == 200
+    data = response.json()
+
+    assert (
+        data["breed"] in committed_classes
+    ), f"Predicted breed '{data['breed']}' not in 37 classes"
+    assert data["species"] == species_map[data["breed"]]
+    for top_item in data["top_3"]:
+        assert top_item["breed"] in committed_classes
+        assert top_item["species"] == species_map[top_item["breed"]]

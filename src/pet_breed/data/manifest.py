@@ -5,7 +5,7 @@ Manifest generator creating validated JSON records for train/val/test and corrup
 import json
 import random
 from pathlib import Path
-from typing import Dict, List, Optional
+
 from PIL import Image
 from tqdm import tqdm
 
@@ -14,7 +14,6 @@ from pet_breed.config import (
     CORRUPTED_DIR,
     DEFAULT_SEED,
     IMAGES_DIR,
-    LABELS_PATH,
     MANIFEST_PATH,
     get_class_names,
     get_species_map,
@@ -34,30 +33,32 @@ def _get_breed_from_filename(filename: str) -> str:
     # Split from right on last underscore followed by numbers
     parts = stem.rsplit("_", 1)
     raw_breed = parts[0]
-    
+
     # Map raw_breed string to canonical class name from labels.json
     classes = get_class_names()
     # Normalize comparison by removing underscores and lowercase
     norm_map = {c.lower().replace(" ", "_"): c for c in classes}
-    
+
     if raw_breed in norm_map:
         return norm_map[raw_breed]
     if raw_breed.lower() in norm_map:
         return norm_map[raw_breed.lower()]
-    
+
     # Direct match fallback
     for c in classes:
         if c.lower().replace(" ", "") == raw_breed.lower().replace("_", ""):
             return c
-            
-    raise ValueError(f"Could not map filename stem '{stem}' (raw breed: '{raw_breed}') to a known class.")
+
+    raise ValueError(
+        f"Could not map filename stem '{stem}' (raw breed: '{raw_breed}') to a known class."
+    )
 
 
 def build_manifest(
     val_ratio: float = 0.2,
     seed: int = DEFAULT_SEED,
     generate_corrupted_test: bool = True,
-) -> List[Dict]:
+) -> list[dict]:
     """
     Build complete dataset manifest with train, val, test, and corrupted drift sets.
     """
@@ -74,11 +75,11 @@ def build_manifest(
     test_stems = set()
 
     if trainval_list_file.exists() and test_list_file.exists():
-        with open(trainval_list_file, "r") as f:
+        with open(trainval_list_file) as f:
             for line in f:
                 if line.strip():
                     trainval_stems.add(line.strip().split()[0])
-        with open(test_list_file, "r") as f:
+        with open(test_list_file) as f:
             for line in f:
                 if line.strip():
                     test_stems.add(line.strip().split()[0])
@@ -129,7 +130,9 @@ def build_manifest(
 
         record = {
             "image_id": stem,
-            "path": str(img_path.relative_to(MANIFEST_PATH.parent.parent)).replace("\\", "/"),
+            "path": str(img_path.relative_to(MANIFEST_PATH.parent.parent)).replace(
+                "\\", "/"
+            ),
             "breed": breed,
             "species": species_map.get(breed, "unknown"),
             "class_index": class_to_idx[breed],

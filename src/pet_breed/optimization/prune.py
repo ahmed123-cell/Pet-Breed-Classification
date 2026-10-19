@@ -3,18 +3,18 @@ Structured channel pruning for ResNet backbone.
 Applies L1-norm structured channel pruning on Conv2d layers and measures accuracy/sparsity impact.
 """
 
-from pathlib import Path
-from typing import Dict, Tuple
 import copy
+from pathlib import Path
+
 import torch
-import torch.nn as nn
-import torch.nn.utils.prune as prune
+from torch import nn
+from torch.nn.utils import prune
 from torch.utils.data import DataLoader
 
 from pet_breed.config import (
     CHECKPOINTS_DIR,
-    EXPORTED_MODELS_DIR,
     DEFAULT_NUM_CLASSES,
+    EXPORTED_MODELS_DIR,
 )
 from pet_breed.data.dataset import PetBreedDataset
 from pet_breed.models.backbones import PetClassifierBackbone, get_model
@@ -32,7 +32,7 @@ def apply_structured_pruning(
     """
     pruned_model = copy.deepcopy(model)
 
-    for name, module in pruned_model.named_modules():
+    for _name, module in pruned_model.named_modules():
         if isinstance(module, nn.Conv2d):
             # Prune channels (dim 0 = output channels / filters)
             prune.ln_structured(module, name="weight", amount=amount, n=1, dim=0)
@@ -56,15 +56,19 @@ def run_pruning_experiment(
     amount: float = 0.30,
     fine_tune_epochs: int = 1,
     lr: float = 1e-5,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Load base model, apply structured pruning, optionally fine-tune, and evaluate.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n--- Running Structured Channel Pruning ({amount * 100:.0f}% sparsity) ---")
+    print(
+        f"\n--- Running Structured Channel Pruning ({amount * 100:.0f}% sparsity) ---"
+    )
 
     # Load baseline model
-    base_model = get_model(backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False)
+    base_model = get_model(
+        backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False
+    )
     if checkpoint_path.exists():
         state = torch.load(checkpoint_path, map_location=device)
         state_dict = state.get("state_dict", state.get("model_state_dict", state))
@@ -85,7 +89,9 @@ def run_pruning_experiment(
 
     # Post-pruning eval
     pruned_eval_pre = evaluate_model(pruned_model, val_loader, device)
-    print(f"Pruned (Raw) Top-1: {pruned_eval_pre['top1']:.4f} | Sparsity: {actual_sparsity:.2%}")
+    print(
+        f"Pruned (Raw) Top-1: {pruned_eval_pre['top1']:.4f} | Sparsity: {actual_sparsity:.2%}"
+    )
 
     # Optional brief fine-tuning to recover accuracy
     if fine_tune_epochs > 0:
@@ -95,7 +101,7 @@ def run_pruning_experiment(
         criterion = nn.CrossEntropyLoss()
 
         pruned_model.train()
-        for epoch in range(fine_tune_epochs):
+        for _epoch in range(fine_tune_epochs):
             for imgs, lbls, _ in train_loader:
                 imgs, lbls = imgs.to(device), lbls.to(device)
                 optimizer.zero_grad()
@@ -105,7 +111,9 @@ def run_pruning_experiment(
                 optimizer.step()
 
     final_eval = evaluate_model(pruned_model, val_loader, device)
-    print(f"Pruned (Recovered) Top-1: {final_eval['top1']:.4f} | Delta: {final_eval['top1'] - base_eval['top1']:+.4f}")
+    print(
+        f"Pruned (Recovered) Top-1: {final_eval['top1']:.4f} | Delta: {final_eval['top1'] - base_eval['top1']:+.4f}"
+    )
 
     # Save pruned model
     save_path = EXPORTED_MODELS_DIR / "resnet50_pruned.pth"

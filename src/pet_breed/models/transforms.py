@@ -3,10 +3,9 @@ Canonical preprocessing pipelines for training, evaluation, and production servi
 Ensures zero train/serve preprocessing skew.
 """
 
-from typing import Tuple
-from PIL import Image
 import torch
 import torchvision.transforms as T
+from PIL import Image
 
 from pet_breed.config import (
     CROP_PCT,
@@ -24,15 +23,17 @@ def get_train_transform(
     Training transform: includes data augmentation (RandomResizedCrop, RandomHorizontalFlip, ColorJitter).
     Only used during training.
     """
-    return T.Compose([
-        T.RandomResizedCrop(
-            image_size, scale=(0.8, 1.0), interpolation=T.InterpolationMode.BILINEAR
-        ),
-        T.RandomHorizontalFlip(p=0.5),
-        T.ColorJitter(brightness=0.1, contrast=0.1),
-        T.ToTensor(),
-        T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-    ])
+    return T.Compose(
+        [
+            T.RandomResizedCrop(
+                image_size, scale=(0.8, 1.0), interpolation=T.InterpolationMode.BILINEAR
+            ),
+            T.RandomHorizontalFlip(p=0.5),
+            T.ColorJitter(brightness=0.1, contrast=0.1),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+    )
 
 
 def get_eval_transform(
@@ -45,12 +46,14 @@ def get_eval_transform(
     Used identically in offline evaluation, batch scoring, and production API serving.
     """
     resize_dim = int(image_size / crop_pct)  # 224 / 0.875 = 256
-    return T.Compose([
-        T.Resize(resize_dim, interpolation=T.InterpolationMode.BILINEAR),
-        T.CenterCrop(image_size),
-        T.ToTensor(),
-        T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-    ])
+    return T.Compose(
+        [
+            T.Resize(resize_dim, interpolation=T.InterpolationMode.BILINEAR),
+            T.CenterCrop(image_size),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+    )
 
 
 class CanonicalPreprocessor:

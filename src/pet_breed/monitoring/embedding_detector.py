@@ -2,26 +2,26 @@
 Penultimate-layer embedding drift detector using Maximum Mean Discrepancy (MMD) and Domain Classifier.
 """
 
-from typing import Dict, Optional
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import cross_val_score
 
 
-def compute_rbf_kernel(X: np.ndarray, Y: np.ndarray, gamma: Optional[float] = None) -> np.ndarray:
+def compute_rbf_kernel(
+    X: np.ndarray, Y: np.ndarray, gamma: float | None = None
+) -> np.ndarray:
     """Compute RBF Gaussian kernel matrix between X and Y."""
     if gamma is None:
         gamma = 1.0 / X.shape[1]
     dist_sq = (
-        np.sum(X ** 2, axis=1, keepdims=True)
-        + np.sum(Y ** 2, axis=1, keepdims=True).T
+        np.sum(X**2, axis=1, keepdims=True)
+        + np.sum(Y**2, axis=1, keepdims=True).T
         - 2.0 * np.dot(X, Y.T)
     )
     return np.exp(-gamma * np.maximum(dist_sq, 0.0))
 
 
-def compute_mmd(X: np.ndarray, Y: np.ndarray, gamma: Optional[float] = None) -> float:
+def compute_mmd(X: np.ndarray, Y: np.ndarray, gamma: float | None = None) -> float:
     """
     Compute Maximum Mean Discrepancy (MMD^2) between reference embeddings X and batch embeddings Y.
     """
@@ -60,7 +60,7 @@ class EmbeddingDriftDetector:
         self.mmd_threshold = mmd_threshold
         self.auc_threshold = domain_classifier_auc_threshold
 
-    def score_batch(self, current_embeddings: np.ndarray) -> Dict[str, any]:
+    def score_batch(self, current_embeddings: np.ndarray) -> dict[str, any]:
         """
         Evaluate batch embeddings against reference embeddings via MMD and Domain Classifier AUC.
         """
@@ -69,13 +69,15 @@ class EmbeddingDriftDetector:
         # Domain Classifier (discriminate between Reference=0 and Current=1)
         n_ref = len(self.reference_embeddings)
         n_curr = len(current_embeddings)
-        
+
         # Subsample to balance if sizes differ heavily
         min_n = min(n_ref, n_curr, 200)
         idx_ref = np.random.choice(n_ref, min_n, replace=False)
         idx_curr = np.random.choice(n_curr, min_n, replace=False)
 
-        X = np.vstack([self.reference_embeddings[idx_ref], current_embeddings[idx_curr]])
+        X = np.vstack(
+            [self.reference_embeddings[idx_ref], current_embeddings[idx_curr]]
+        )
         y = np.hstack([np.zeros(min_n), np.ones(min_n)])
 
         try:
@@ -85,7 +87,9 @@ class EmbeddingDriftDetector:
         except Exception:
             auc_score = 0.50
 
-        drift_detected = (mmd_score >= self.mmd_threshold) or (auc_score >= self.auc_threshold)
+        drift_detected = (mmd_score >= self.mmd_threshold) or (
+            auc_score >= self.auc_threshold
+        )
 
         return {
             "detector": "embedding_penultimate_mmd",

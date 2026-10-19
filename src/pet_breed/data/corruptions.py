@@ -10,7 +10,8 @@ Implements 5 corruption types at 3 severity levels:
 """
 
 import io
-from typing import Literal, Tuple
+from typing import Literal
+
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 from scipy.signal import convolve2d
@@ -67,7 +68,7 @@ def apply_downscale_upscale(image: Image.Image, severity: int) -> Image.Image:
     orig_size = image.size
     scales = {1: 128, 2: 96, 3: 64}
     target_dim = scales.get(severity, 96)
-    
+
     # Maintain aspect ratio for downscaling
     w, h = orig_size
     if w < h:

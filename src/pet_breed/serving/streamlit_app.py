@@ -5,9 +5,10 @@ Can communicate with the live FastAPI endpoint or execute local PyTorch inferenc
 
 import io
 from pathlib import Path
-from PIL import Image
+
 import requests
 import streamlit as st
+from PIL import Image
 
 API_URL = "http://localhost:8000"
 
@@ -19,17 +20,15 @@ st.set_page_config(
 )
 
 st.title("🐾 Pet Breed Classification & Calibrated Serving")
-st.markdown(
-    """
+st.markdown("""
     **Production Computer Vision MLOps System** classifying 37 cat and dog breeds with **calibrated selective abstention**.
-    """
-)
+    """)
 
 # Sidebar: Service & Config
 with st.sidebar:
     st.header("⚙️ Service Configuration")
     api_endpoint = st.text_input("FastAPI Endpoint", value=API_URL)
-    
+
     # Check Backend Health
     health_status = "🔴 Disconnected"
     try:
@@ -65,7 +64,9 @@ with col1:
         "🐶 Boxer": "boxer_2.jpg",
         "🐱 Siamese Cat": "Siamese_2.jpg",
     }
-    selected_sample = st.selectbox("Or choose a pre-loaded test sample:", list(sample_options.keys()))
+    selected_sample = st.selectbox(
+        "Or choose a pre-loaded test sample:", list(sample_options.keys())
+    )
 
     image_to_predict = None
 
@@ -77,11 +78,20 @@ with col1:
         sample_path = Path("data/corrupted/brightness_shift_s1") / sample_filename
         if sample_path.exists():
             image_to_predict = Image.open(sample_path)
-            st.image(image_to_predict, caption=f"Sample: {selected_sample}", use_container_width=True)
+            st.image(
+                image_to_predict,
+                caption=f"Sample: {selected_sample}",
+                use_container_width=True,
+            )
         else:
             st.warning("Sample image not found on local path.")
 
-    predict_button = st.button("🚀 Classify Breed", type="primary", use_container_width=True, disabled=image_to_predict is None)
+    predict_button = st.button(
+        "🚀 Classify Breed",
+        type="primary",
+        use_container_width=True,
+        disabled=image_to_predict is None,
+    )
 
 with col2:
     st.subheader("2. Prediction & Calibration Output")
@@ -112,10 +122,14 @@ with col2:
                     # Decision Alert
                     if decision == "confident":
                         st.success(f"### Result: **{breed}** ({species})")
-                        st.info(f"**Decision:** `confident` — Calibrated Confidence: **{conf * 100:.1f}%**")
+                        st.info(
+                            f"**Decision:** `confident` — Calibrated Confidence: **{conf * 100:.1f}%**"
+                        )
                     else:
                         st.warning(f"### Result: **{breed}** ({species})")
-                        st.error(f"**Decision:** `uncertain` (Abstained) — Calibrated Confidence: **{conf * 100:.1f}%** (Below Threshold)")
+                        st.error(
+                            f"**Decision:** `uncertain` (Abstained) — Calibrated Confidence: **{conf * 100:.1f}%** (Below Threshold)"
+                        )
 
                     # Top 3 Candidates
                     st.markdown("#### 📊 Top-3 Ranked Candidates")
@@ -123,15 +137,21 @@ with col2:
                         cand_breed = cand["breed"].replace("_", " ").title()
                         cand_species = "🐱" if cand["species"] == "cat" else "🐶"
                         cand_conf = cand["confidence"]
-                        st.write(f"**{cand_species} {cand_breed}** ({cand_conf * 100:.1f}%)")
+                        st.write(
+                            f"**{cand_species} {cand_breed}** ({cand_conf * 100:.1f}%)"
+                        )
                         st.progress(float(cand_conf))
 
                     st.caption(f"Model: {data.get('model_version')} | Threshold: 0.65")
                 else:
                     st.error(f"API Error ({response.status_code}): {response.text}")
             except requests.exceptions.ConnectionError:
-                st.error("Could not connect to FastAPI server. Run `uvicorn pet_breed.serving.app:app --port 8000` first.")
+                st.error(
+                    "Could not connect to FastAPI server. Run `uvicorn pet_breed.serving.app:app --port 8000` first."
+                )
             except Exception as e:
-                st.error(f"Error during prediction: {str(e)}")
+                st.error(f"Error during prediction: {e!s}")
     else:
-        st.info("👈 Upload a pet image or select a quick test sample, then click **Classify Breed**.")
+        st.info(
+            "👈 Upload a pet image or select a quick test sample, then click **Classify Breed**."
+        )

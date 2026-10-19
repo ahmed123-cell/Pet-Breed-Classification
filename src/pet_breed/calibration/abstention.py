@@ -3,7 +3,6 @@ Abstention policy evaluator for selective classification.
 Computes coverage, selective accuracy, and determines optimal confidence thresholds.
 """
 
-from typing import Dict, List, Tuple
 import numpy as np
 
 
@@ -11,10 +10,10 @@ def evaluate_abstention(
     calibrated_probs: np.ndarray,
     labels: np.ndarray,
     threshold: float = 0.65,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Evaluate selective prediction metrics at a given confidence threshold.
-    
+
     Returns:
         coverage: fraction of samples where max_prob >= threshold
         selective_accuracy: accuracy computed ONLY on the answered (covered) samples
@@ -53,17 +52,22 @@ def find_optimal_threshold(
     calibrated_probs: np.ndarray,
     labels: np.ndarray,
     target_selective_accuracy: float = 0.95,
-) -> Tuple[float, Dict[str, float]]:
+) -> tuple[float, dict[str, float]]:
     """
     Scan thresholds in [0.30, 0.99] to find the minimum threshold achieving target selective accuracy.
     """
     thresholds = np.linspace(0.30, 0.99, 70)
     best_threshold = 0.65
-    best_metrics = evaluate_abstention(calibrated_probs, labels, threshold=best_threshold)
+    best_metrics = evaluate_abstention(
+        calibrated_probs, labels, threshold=best_threshold
+    )
 
     for th in thresholds:
         m = evaluate_abstention(calibrated_probs, labels, threshold=float(th))
-        if m["selective_accuracy"] >= target_selective_accuracy and m["coverage"] >= 0.50:
+        if (
+            m["selective_accuracy"] >= target_selective_accuracy
+            and m["coverage"] >= 0.50
+        ):
             return float(th), m
 
     return best_threshold, best_metrics

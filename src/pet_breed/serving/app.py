@@ -5,12 +5,12 @@ Production FastAPI Application for Pet Breed Classification.
 import io
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
 from pathlib import Path
-from PIL import Image, UnidentifiedImageError
+
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from PIL import Image, UnidentifiedImageError
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from pet_breed.config import (
@@ -30,7 +30,7 @@ from pet_breed.monitoring.metrics_exporter import (
 from pet_breed.serving.schemas import HealthResponse, PredictionResponse
 
 # Global classifier instance loaded ONCE at startup
-classifier: Optional[PetBreedClassifier] = None
+classifier: PetBreedClassifier | None = None
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 
@@ -44,15 +44,24 @@ async def lifespan(app: FastAPI):
     if not weights_path.exists():
         weights_path = CHECKPOINTS_DIR / "resnet50_best.pth"
 
+    if not weights_path.exists():
+        raise RuntimeError(
+            f"Trained model checkpoint not found at {EXPORTED_MODELS_DIR / 'resnet50_calibrated.pth'} "
+            f"or {CHECKPOINTS_DIR / 'resnet50_best.pth'}. "
+            "Please run 'python scripts/bootstrap_models.py' or 'dvc repro' to obtain the 37-class checkpoint before starting."
+        )
+
     classifier = PetBreedClassifier(
         backbone_name="resnet50",
         num_classes=DEFAULT_NUM_CLASSES,
-        weights_path=weights_path if weights_path.exists() else None,
+        weights_path=weights_path,
         temperature=1.0,
         abstention_threshold=DEFAULT_ABSTENTION_THRESHOLD,
         model_version=MODEL_VERSION,
     )
-    print(f"PetBreedClassifier initialized with model version: {MODEL_VERSION}")
+    print(
+        f"PetBreedClassifier initialized with model version: {classifier.model_version}"
+    )
     yield
     print("Shutting down PetBreedClassifier service.")
 
@@ -125,7 +134,9 @@ async def metrics():
     response_model=PredictionResponse,
     status_code=status.HTTP_200_OK,
     responses={
-        422: {"description": "Validation error: invalid image payload or oversized file"},
+        422: {
+            "description": "Validation error: invalid image payload or oversized file"
+        },
         200: {"description": "Successful breed classification"},
     },
 )
@@ -144,8 +155,8 @@ async def predict(file: UploadFile = File(...)):
         REQUEST_COUNT.labels(endpoint="/predict", http_status="422").inc()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Failed to read uploaded file: {str(e)}",
-        )
+            detail=f"Failed to read uploaded file: {e!s}",
+        ) from e
 
     if len(contents) == 0:
         REQUEST_COUNT.labels(endpoint="/predict", http_status="422").inc()
@@ -171,8 +182,8 @@ async def predict(file: UploadFile = File(...)):
         REQUEST_COUNT.labels(endpoint="/predict", http_status="422").inc()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Uploaded file is not a valid image: {str(e)}",
-        )
+            detail=f"Uploaded file is not a valid image: {e!s}",
+        ) from e
 
     # 3. Model Inference
     if classifier is None:
@@ -187,8 +198,8 @@ async def predict(file: UploadFile = File(...)):
         REQUEST_COUNT.labels(endpoint="/predict", http_status="422").inc()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Failed to process image through inference pipeline: {str(e)}",
-        )
+            detail=f"Failed to process image through inference pipeline: {e!s}",
+        ) from e
 
     latency = time.perf_counter() - t0
     REQUEST_COUNT.labels(endpoint="/predict", http_status="200").inc()

@@ -4,9 +4,8 @@ Produces model_int8.onnx and evaluates accuracy and latency impact.
 """
 
 from pathlib import Path
-from typing import Dict, Iterator, Optional
+
 import numpy as np
-import onnx
 from onnxruntime.quantization import (
     CalibrationDataReader,
     QuantFormat,
@@ -15,7 +14,7 @@ from onnxruntime.quantization import (
 )
 from torch.utils.data import DataLoader
 
-from pet_breed.config import EXPORTED_MODELS_DIR, IMAGE_SIZE
+from pet_breed.config import EXPORTED_MODELS_DIR
 from pet_breed.data.dataset import PetBreedDataset
 from pet_breed.models.transforms import get_eval_transform
 
@@ -31,7 +30,7 @@ class PetCalibrationDataReader(CalibrationDataReader):
         self.data_iter = iter(dataloader)
         self.count = 0
 
-    def get_next(self) -> Optional[Dict[str, np.ndarray]]:
+    def get_next(self) -> dict[str, np.ndarray] | None:
         if self.count >= self.max_samples:
             return None
         try:
@@ -75,7 +74,9 @@ def quantize_onnx_int8(
 
     fp32_size_mb = input_fp32_onnx.stat().st_size / (1024 * 1024)
     int8_size_mb = output_int8_onnx.stat().st_size / (1024 * 1024)
-    print(f"PTQ INT8 model created: {int8_size_mb:.2f} MB (Compression: {fp32_size_mb/int8_size_mb:.2f}x vs FP32 {fp32_size_mb:.2f} MB)")
+    print(
+        f"PTQ INT8 model created: {int8_size_mb:.2f} MB (Compression: {fp32_size_mb/int8_size_mb:.2f}x vs FP32 {fp32_size_mb:.2f} MB)"
+    )
     return output_int8_onnx
 
 

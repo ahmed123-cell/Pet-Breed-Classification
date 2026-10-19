@@ -3,7 +3,6 @@ Output confidence distribution drift detector.
 Monitors shifts in calibrated confidence distributions and abstention rates.
 """
 
-from typing import Dict
 import numpy as np
 from scipy.stats import ks_2samp, wasserstein_distance
 
@@ -13,11 +12,13 @@ class ConfidenceDriftDetector:
     Monitors output confidence distribution shifts vs reference baseline.
     """
 
-    def __init__(self, reference_confidences: np.ndarray, ks_pvalue_threshold: float = 0.01):
+    def __init__(
+        self, reference_confidences: np.ndarray, ks_pvalue_threshold: float = 0.01
+    ):
         self.reference_confs = reference_confidences
         self.ks_threshold = ks_pvalue_threshold
 
-    def score_batch(self, current_confidences: np.ndarray) -> Dict[str, any]:
+    def score_batch(self, current_confidences: np.ndarray) -> dict[str, any]:
         """
         Evaluate current batch confidences against baseline.
         """

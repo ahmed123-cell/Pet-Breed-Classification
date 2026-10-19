@@ -3,13 +3,12 @@ OpenVINO IR model conversion and optimized CPU inference runner.
 """
 
 from pathlib import Path
-from typing import Dict, Tuple
+
 import numpy as np
 import openvino as ov
 import torch
-import torch.nn as nn
 
-from pet_breed.config import EXPORTED_MODELS_DIR, IMAGE_SIZE
+from pet_breed.config import EXPORTED_MODELS_DIR
 
 
 def convert_onnx_to_openvino(

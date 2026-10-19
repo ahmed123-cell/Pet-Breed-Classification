@@ -3,37 +3,43 @@ Fast, Reliable Downloader and Extractor for the Oxford-IIIT Pet Dataset.
 Uses the official Thor CDN mirror with strict size and archive validation.
 """
 
-import os
 import shutil
 import tarfile
 import time
 from pathlib import Path
-import requests
-from tqdm import tqdm
-import urllib3
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import requests
+import urllib3
+from tqdm import tqdm
 
 from pet_breed.config import ANNOTATIONS_DIR, IMAGES_DIR, RAW_DATA_DIR
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 THOR_IMAGES_URL = "https://thor.robots.ox.ac.uk/datasets/pets/images.tar.gz"
 THOR_ANNOTATIONS_URL = "https://thor.robots.ox.ac.uk/datasets/pets/annotations.tar.gz"
 
-MIN_IMAGES_BYTES = 790_000_000      # ~755 MB
+MIN_IMAGES_BYTES = 790_000_000  # ~755 MB
 MIN_ANNOTATIONS_BYTES = 19_000_000  # ~18.2 MB
 
 
-def _download_stream(url: str, dest_path: Path, min_bytes: int, max_retries: int = 15) -> None:
+def _download_stream(
+    url: str, dest_path: Path, min_bytes: int, max_retries: int = 15
+) -> None:
     """Download archive reliably with streaming and retry."""
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Check if existing archive is full size
     if dest_path.exists():
         if dest_path.stat().st_size >= min_bytes:
-            print(f"Verified complete archive exists: {dest_path.name} ({dest_path.stat().st_size / 1e6:.1f} MB)")
+            print(
+                f"Verified complete archive exists: {dest_path.name} ({dest_path.stat().st_size / 1e6:.1f} MB)"
+            )
             return
         else:
-            print(f"Removing incomplete archive ({dest_path.stat().st_size / 1e6:.1f} MB < {min_bytes / 1e6:.1f} MB): {dest_path.name}")
+            print(
+                f"Removing incomplete archive ({dest_path.stat().st_size / 1e6:.1f} MB < {min_bytes / 1e6:.1f} MB): {dest_path.name}"
+            )
             dest_path.unlink()
 
     temp_path = dest_path.with_suffix(".part")
@@ -41,38 +47,45 @@ def _download_stream(url: str, dest_path: Path, min_bytes: int, max_retries: int
         temp_path.unlink()
 
     print(f"\nConnecting to {url}...")
-    
+
     for attempt in range(1, max_retries + 1):
         try:
             with requests.get(url, stream=True, verify=False, timeout=120) as r:
                 r.raise_for_status()
                 total_size = int(r.headers.get("content-length", 0))
                 print(f"Downloading {dest_path.name} ({total_size / 1e6:.1f} MB)...")
-                
-                with open(temp_path, "wb") as f, tqdm(
-                    desc=dest_path.name,
-                    total=total_size,
-                    unit="B",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                ) as bar:
+
+                with (
+                    open(temp_path, "wb") as f,
+                    tqdm(
+                        desc=dest_path.name,
+                        total=total_size,
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                    ) as bar,
+                ):
                     for chunk in r.iter_content(chunk_size=1024 * 1024):
                         if chunk:
                             f.write(chunk)
                             bar.update(len(chunk))
-                            
+
             if temp_path.exists() and temp_path.stat().st_size >= min_bytes:
                 temp_path.rename(dest_path)
-                print(f"Successfully downloaded and verified {dest_path.name} ({dest_path.stat().st_size / 1e6:.1f} MB)!")
+                print(
+                    f"Successfully downloaded and verified {dest_path.name} ({dest_path.stat().st_size / 1e6:.1f} MB)!"
+                )
                 return
             else:
-                print(f"Download incomplete. Retrying...")
+                print("Download incomplete. Retrying...")
                 if temp_path.exists():
                     temp_path.unlink()
         except Exception as e:
-            print(f"Download attempt {attempt}/{max_retries} failed: {e}. Retrying in 5s...")
+            print(
+                f"Download attempt {attempt}/{max_retries} failed: {e}. Retrying in 5s..."
+            )
             time.sleep(5)
-            
+
     raise RuntimeError(f"Failed to download {url} after {max_retries} attempts.")
 
 
@@ -93,7 +106,9 @@ def download_dataset(target_raw_dir: Path = RAW_DATA_DIR) -> Path:
     annotations_archive = target_raw_dir / "annotations.tar.gz"
 
     # 1. Download full archives
-    _download_stream(THOR_ANNOTATIONS_URL, annotations_archive, min_bytes=MIN_ANNOTATIONS_BYTES)
+    _download_stream(
+        THOR_ANNOTATIONS_URL, annotations_archive, min_bytes=MIN_ANNOTATIONS_BYTES
+    )
     _download_stream(THOR_IMAGES_URL, images_archive, min_bytes=MIN_IMAGES_BYTES)
 
     # 2. Extract
@@ -119,7 +134,7 @@ def download_dataset(target_raw_dir: Path = RAW_DATA_DIR) -> Path:
                 shutil.copytree(ann_file, dest, dirs_exist_ok=True)
 
     total_images = len(list(IMAGES_DIR.glob("*.jpg")))
-    print(f"\n" + "=" * 50)
+    print("\n" + "=" * 50)
     print(f"Success! Real Pet Photos in {IMAGES_DIR}: {total_images}")
     print("=" * 50)
     return IMAGES_DIR

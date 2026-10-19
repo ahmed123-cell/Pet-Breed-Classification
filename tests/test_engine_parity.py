@@ -3,12 +3,8 @@ Test asserting PyTorch and ONNX Runtime logits agree to within 1e-4 on 200 image
 """
 
 from pathlib import Path
-import numpy as np
-import onnxruntime as ort
-import pytest
-import torch
 
-from pet_breed.config import DEFAULT_NUM_CLASSES, EXPORTED_MODELS_DIR, IMAGE_SIZE
+from pet_breed.config import DEFAULT_NUM_CLASSES
 from pet_breed.models.backbones import get_model
 from pet_breed.optimization.onnx_export import export_to_onnx, verify_onnx_agreement
 

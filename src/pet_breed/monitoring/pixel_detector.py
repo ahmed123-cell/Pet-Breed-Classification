@@ -3,14 +3,13 @@ Cheap statistical pixel drift detector.
 Computes low-cost distributional shifts across image brightness, contrast, and Laplacian sharpness.
 """
 
-from typing import Dict, List, Tuple
 import numpy as np
 from PIL import Image
 from scipy.signal import convolve2d
 from scipy.stats import ks_2samp, wasserstein_distance
 
 
-def extract_pixel_features(image: Image.Image) -> Dict[str, float]:
+def extract_pixel_features(image: Image.Image) -> dict[str, float]:
     """
     Extract low-cost pixel-level statistics from an image:
     1. Brightness: mean grayscale intensity [0..255]
@@ -33,7 +32,7 @@ def extract_pixel_features(image: Image.Image) -> Dict[str, float]:
     }
 
 
-def extract_batch_pixel_features(images: List[Image.Image]) -> Dict[str, np.ndarray]:
+def extract_batch_pixel_features(images: list[Image.Image]) -> dict[str, np.ndarray]:
     """Extract pixel statistics vectors across a batch of images."""
     brightnesses = []
     contrasts = []
@@ -57,11 +56,13 @@ class CheapPixelDriftDetector:
     Statistical pixel drift detector using Wasserstein distance and KS 2-sample tests against a reference baseline.
     """
 
-    def __init__(self, reference_images: List[Image.Image], threshold_pvalue: float = 0.01):
+    def __init__(
+        self, reference_images: list[Image.Image], threshold_pvalue: float = 0.01
+    ):
         self.reference_feats = extract_batch_pixel_features(reference_images)
         self.threshold_pvalue = threshold_pvalue
 
-    def score_batch(self, current_images: List[Image.Image]) -> Dict[str, any]:
+    def score_batch(self, current_images: list[Image.Image]) -> dict[str, any]:
         """
         Evaluate current batch against reference baseline distributions.
         """

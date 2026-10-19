@@ -11,12 +11,10 @@ Benchmarks:
 8. TensorRT FP16 (GPU / Triton)
 """
 
-import os
 import platform
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
 
 try:
     if hasattr(sys.stdout, "reconfigure"):
@@ -29,7 +27,6 @@ except Exception:
 import numpy as np
 import onnxruntime as ort
 import torch
-import torch.nn as nn
 from tabulate import tabulate
 
 from pet_breed.config import (
@@ -61,21 +58,25 @@ def measure_p95_latency(
     return float(np.percentile(latencies, 95))
 
 
-def get_file_size_mb(path: Optional[Path]) -> float:
+def get_file_size_mb(path: Path | None) -> float:
     """Get file size in megabytes."""
     if path is not None and Path(path).exists():
         return round(Path(path).stat().st_size / (1024 * 1024), 2)
     return 0.0
 
 
-def run_full_benchmark_suite() -> List[Dict[str, any]]:
+def run_full_benchmark_suite() -> list[dict[str, any]]:
     """
     Run the unified benchmark across all 5 optimization techniques and deployment engines.
     """
     EXPORTED_MODELS_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     hw_cpu = f"{platform.processor() or 'x86_64 CPU'}"
-    hw_gpu = "NVIDIA T4 / RTX GPU" if torch.cuda.is_available() else "NVIDIA GPU (T4 / Colab)"
+    hw_gpu = (
+        "NVIDIA T4 / RTX GPU"
+        if torch.cuda.is_available()
+        else "NVIDIA GPU (T4 / Colab)"
+    )
 
     dummy_tensor = torch.randn(1, 3, IMAGE_SIZE, IMAGE_SIZE)
     dummy_numpy = dummy_tensor.numpy()
@@ -83,24 +84,35 @@ def run_full_benchmark_suite() -> List[Dict[str, any]]:
     # 1. PyTorch Baseline (ResNet-50 FP32)
     base_model = get_model("resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
     base_model.eval()
-    p95_torch = measure_p95_latency(lambda x: base_model(torch.from_numpy(x)), dummy_numpy)
+    p95_torch = measure_p95_latency(
+        lambda x: base_model(torch.from_numpy(x)), dummy_numpy
+    )
 
     # 2. ONNX Runtime FP32 CPU
     onnx_fp32_path = EXPORTED_MODELS_DIR / "model_fp32.onnx"
     if not onnx_fp32_path.exists():
         from pet_breed.optimization.onnx_export import export_to_onnx
+
         export_to_onnx(base_model, onnx_fp32_path)
-    
-    ort_fp32_sess = ort.InferenceSession(str(onnx_fp32_path), providers=["CPUExecutionProvider"])
+
+    ort_fp32_sess = ort.InferenceSession(
+        str(onnx_fp32_path), providers=["CPUExecutionProvider"]
+    )
     in_name = ort_fp32_sess.get_inputs()[0].name
-    p95_ort_fp32 = measure_p95_latency(lambda x: ort_fp32_sess.run(None, {in_name: x}), dummy_numpy)
+    p95_ort_fp32 = measure_p95_latency(
+        lambda x: ort_fp32_sess.run(None, {in_name: x}), dummy_numpy
+    )
 
     # 3. INT8 PTQ (ONNX Runtime INT8)
     onnx_int8_path = EXPORTED_MODELS_DIR / "model_int8.onnx"
     if onnx_int8_path.exists():
-        ort_int8_sess = ort.InferenceSession(str(onnx_int8_path), providers=["CPUExecutionProvider"])
+        ort_int8_sess = ort.InferenceSession(
+            str(onnx_int8_path), providers=["CPUExecutionProvider"]
+        )
         in_name_int8 = ort_int8_sess.get_inputs()[0].name
-        p95_ort_int8 = measure_p95_latency(lambda x: ort_int8_sess.run(None, {in_name_int8: x}), dummy_numpy)
+        p95_ort_int8 = measure_p95_latency(
+            lambda x: ort_int8_sess.run(None, {in_name_int8: x}), dummy_numpy
+        )
     else:
         p95_ort_int8 = p95_ort_fp32 * 0.45
 
@@ -109,21 +121,27 @@ def run_full_benchmark_suite() -> List[Dict[str, any]]:
     if not openvino_xml.exists():
         try:
             from pet_breed.optimization.openvino_export import convert_onnx_to_openvino
+
             convert_onnx_to_openvino(onnx_fp32_path, openvino_xml.parent)
         except Exception:
             pass
 
     try:
         from pet_breed.optimization.openvino_export import OpenVINOInferenceRunner
+
         ov_runner = OpenVINOInferenceRunner(openvino_xml)
         p95_ov = measure_p95_latency(lambda x: ov_runner.predict(x), dummy_numpy)
     except Exception:
         p95_ov = p95_ort_fp32 * 0.70
 
     # 5. Distilled Student (MobileNetV3-Small)
-    student_model = get_model("mobilenet_v3_small", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
+    student_model = get_model(
+        "mobilenet_v3_small", num_classes=DEFAULT_NUM_CLASSES, pretrained=True
+    )
     student_model.eval()
-    p95_distilled = measure_p95_latency(lambda x: student_model(torch.from_numpy(x)), dummy_numpy)
+    p95_distilled = measure_p95_latency(
+        lambda x: student_model(torch.from_numpy(x)), dummy_numpy
+    )
 
     # 6. TensorRT FP16 GPU (GPU / Standardized T4 reference)
     p95_trt = 2.45  # TensorRT FP16 on NVIDIA T4 reference (measured / Colab)
@@ -197,7 +215,14 @@ def run_full_benchmark_suite() -> List[Dict[str, any]]:
     ]
 
     report_markdown = "# Module 4: Model Optimization & Acceleration Benchmark\n\n"
-    headers = ["Technique / Engine", "Top-1 Acc", "p95 Latency (ms)", "Model Size", "Hardware", "Honesty Explanation"]
+    headers = [
+        "Technique / Engine",
+        "Top-1 Acc",
+        "p95 Latency (ms)",
+        "Model Size",
+        "Hardware",
+        "Honesty Explanation",
+    ]
     rows = [[d[h] for h in headers] for d in table_data]
     report_markdown += tabulate(rows, headers=headers, tablefmt="github") + "\n\n"
     report_markdown += "### Hardware Details & Methodology\n"

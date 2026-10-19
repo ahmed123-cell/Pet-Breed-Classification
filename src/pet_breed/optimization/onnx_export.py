@@ -1,7 +1,5 @@
 import sys
-import os
 from pathlib import Path
-from typing import Dict, Tuple
 
 try:
     if hasattr(sys.stdout, "reconfigure"):
@@ -15,7 +13,7 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 import torch
-import torch.nn as nn
+from torch import nn
 
 from pet_breed.config import (
     DEFAULT_NUM_CLASSES,
@@ -28,7 +26,7 @@ from pet_breed.models.backbones import get_model
 def export_to_onnx(
     model: nn.Module,
     output_path: Path = EXPORTED_MODELS_DIR / "model_fp32.onnx",
-    input_shape: Tuple[int, int, int, int] = (1, 3, IMAGE_SIZE, IMAGE_SIZE),
+    input_shape: tuple[int, int, int, int] = (1, 3, IMAGE_SIZE, IMAGE_SIZE),
     dynamic_axes: bool = True,
 ) -> Path:
     """
@@ -38,7 +36,7 @@ def export_to_onnx(
     model.eval()
 
     dummy_input = torch.randn(*input_shape, requires_grad=False)
-    
+
     dyn_axes_config = (
         {"input": {0: "batch_size"}, "logits": {0: "batch_size"}}
         if dynamic_axes
@@ -70,12 +68,14 @@ def verify_onnx_agreement(
     onnx_path: Path,
     num_samples: int = 200,
     tolerance: float = 1e-4,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Verify that PyTorch model and ONNX Runtime produce logits agreeing to within tolerance (1e-4).
     """
     pytorch_model.eval()
-    ort_session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    ort_session = ort.InferenceSession(
+        str(onnx_path), providers=["CPUExecutionProvider"]
+    )
 
     max_diff = 0.0
     passed = True
@@ -83,7 +83,7 @@ def verify_onnx_agreement(
     for _ in range(num_samples):
         # Generate random input representing normalized image
         test_input = torch.randn(1, 3, IMAGE_SIZE, IMAGE_SIZE)
-        
+
         # PyTorch logits
         with torch.inference_mode():
             torch_logits = pytorch_model(test_input).cpu().numpy()
@@ -99,7 +99,9 @@ def verify_onnx_agreement(
         if diff > tolerance:
             passed = False
 
-    print(f"Logit Agreement over {num_samples} samples: Max Diff = {max_diff:.6e} (Tolerance: {tolerance}) -> Passed: {passed}")
+    print(
+        f"Logit Agreement over {num_samples} samples: Max Diff = {max_diff:.6e} (Tolerance: {tolerance}) -> Passed: {passed}"
+    )
     return {
         "num_samples": num_samples,
         "max_diff": max_diff,
@@ -110,6 +112,9 @@ def verify_onnx_agreement(
 
 if __name__ == "__main__":
     from pet_breed.models.backbones import get_model
-    model = get_model(backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
+
+    model = get_model(
+        backbone_name="resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True
+    )
     out_path = export_to_onnx(model)
     verify_onnx_agreement(model, out_path, num_samples=50)

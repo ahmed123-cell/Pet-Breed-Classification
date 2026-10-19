@@ -3,19 +3,18 @@ Temperature scaling calibration and reliability diagram generation.
 """
 
 from pathlib import Path
-from typing import Dict, Tuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn, optim
 
 from pet_breed.config import REPORTS_DIR
 
 
 def compute_ece(
     probs: np.ndarray, labels: np.ndarray, n_bins: int = 15
-) -> Tuple[float, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[float, np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute Expected Calibration Error (ECE) and bin statistics.
     """
@@ -32,7 +31,7 @@ def compute_ece(
     bin_confs = []
     bin_counts = []
 
-    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
+    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers, strict=False):
         in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
         prop_in_bin = np.mean(in_bin)
 
@@ -100,7 +99,7 @@ def plot_reliability_diagrams(
     labels: np.ndarray,
     save_path: Path = REPORTS_DIR / "calibration.png",
     n_bins: int = 15,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Generate and save side-by-side reliability diagrams before and after temperature scaling.
     """

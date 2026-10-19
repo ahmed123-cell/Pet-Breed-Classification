@@ -3,6 +3,7 @@ Locust load testing scenario for Pet Breed Classification API.
 """
 
 import io
+
 from locust import HttpUser, between, task
 from PIL import Image
 

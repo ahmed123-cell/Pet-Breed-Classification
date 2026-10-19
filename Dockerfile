@@ -16,12 +16,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml .
 COPY src ./src
 COPY data/labels.json ./data/labels.json
+COPY scripts ./scripts
 
 RUN pip install --upgrade pip && \
     pip install .
 
-# Copy model artifacts if available
+# Ensure model directory structure exists
+RUN mkdir -p models/checkpoints models/exported
+
+# Copy model artifacts if available in build context
 COPY models ./models
+
+# Bootstrap verified model artifacts if not present in context
+RUN python scripts/bootstrap_models.py
 
 EXPOSE 8000
 

@@ -3,22 +3,24 @@ MLflow experiment tracking and model registry interface.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+
 import mlflow
 import mlflow.pytorch
 from mlflow.tracking import MlflowClient
 
-from pet_breed.config import CHECKPOINTS_DIR, PROJECT_ROOT
+from pet_breed.config import PROJECT_ROOT
 
 EXPERIMENT_NAME = "pet-breed-classification"
 
 
 def setup_mlflow(
-    tracking_uri: Optional[str] = None,
+    tracking_uri: str | None = None,
     experiment_name: str = EXPERIMENT_NAME,
 ) -> str:
     """Initialize MLflow tracking URI and experiment."""
     import os
+
     os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
     if tracking_uri is None:
@@ -41,11 +43,11 @@ def setup_mlflow(
 
 def log_run_to_mlflow(
     run_name: str,
-    params: Dict[str, Any],
-    metrics: Dict[str, float],
-    model: Optional[Any] = None,
-    artifacts: Optional[Dict[str, Path]] = None,
-    register_model_name: Optional[str] = None,
+    params: dict[str, Any],
+    metrics: dict[str, float],
+    model: Any | None = None,
+    artifacts: dict[str, Path] | None = None,
+    register_model_name: str | None = None,
 ) -> str:
     """Log parameters, metrics, artifacts, and optionally register model in MLflow."""
     setup_mlflow()
@@ -72,6 +74,7 @@ def log_run_to_mlflow(
         if model is not None:
             try:
                 import torch
+
                 dummy_input = torch.randn(1, 3, 224, 224)
                 mlflow.pytorch.log_model(
                     pytorch_model=model,
@@ -112,6 +115,8 @@ def promote_model_to_production(
                 stage=stage,
                 archive_existing_versions=True,
             )
-            print(f"Model '{model_name}' version {latest_version} promoted to '{stage}'.")
+            print(
+                f"Model '{model_name}' version {latest_version} promoted to '{stage}'."
+            )
     except Exception as e:
         print(f"Notice: Model promotion in MLflow registry: {e}")

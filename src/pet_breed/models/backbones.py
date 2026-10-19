@@ -2,10 +2,9 @@
 Model backbone factories for ResNet-50, ResNet-18, and MobileNetV3-Small.
 """
 
-from typing import Tuple, Type
 import torch
-import torch.nn as nn
-import torchvision.models as models
+from torch import nn
+from torchvision import models
 
 from pet_breed.config import DEFAULT_NUM_CLASSES
 
@@ -28,6 +27,7 @@ class PetClassifierBackbone(nn.Module):
         if self.backbone_name == "resnet50":
             try:
                 import ssl
+
                 ssl._create_default_https_context = ssl._create_unverified_context
             except Exception:
                 pass
@@ -45,6 +45,7 @@ class PetClassifierBackbone(nn.Module):
         elif self.backbone_name == "resnet18":
             try:
                 import ssl
+
                 ssl._create_default_https_context = ssl._create_unverified_context
             except Exception:
                 pass
@@ -62,11 +63,14 @@ class PetClassifierBackbone(nn.Module):
         elif self.backbone_name in ["mobilenet_v3_small", "mobilenetv3_small"]:
             try:
                 import ssl
+
                 ssl._create_default_https_context = ssl._create_unverified_context
             except Exception:
                 pass
             try:
-                weights = models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+                weights = (
+                    models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+                )
                 base_model = models.mobilenet_v3_small(weights=weights)
             except Exception:
                 base_model = models.mobilenet_v3_small(weights=None)

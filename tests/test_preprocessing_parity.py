@@ -5,14 +5,12 @@ identical model logits with absolute difference < 1e-4.
 """
 
 import numpy as np
-from PIL import Image
-import pytest
 import torch
+from PIL import Image
 
 from pet_breed.config import DEFAULT_NUM_CLASSES
 from pet_breed.models.backbones import get_model
 from pet_breed.models.transforms import CanonicalPreprocessor, get_eval_transform
-
 
 
 def test_preprocessing_parity_and_logit_agreement():
@@ -20,7 +18,17 @@ def test_preprocessing_parity_and_logit_agreement():
     Assert training-path eval transform and API CanonicalPreprocessor
     produce logits agreeing to <= 1e-4.
     """
-    model = get_model("resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=True)
+    from pet_breed.config import CHECKPOINTS_DIR, EXPORTED_MODELS_DIR
+
+    torch.manual_seed(42)
+    model = get_model("resnet50", num_classes=DEFAULT_NUM_CLASSES, pretrained=False)
+    weights_path = EXPORTED_MODELS_DIR / "resnet50_calibrated.pth"
+    if not weights_path.exists():
+        weights_path = CHECKPOINTS_DIR / "resnet50_best.pth"
+    if weights_path.exists():
+        chk = torch.load(weights_path, map_location="cpu")
+        state_dict = chk.get("state_dict") or chk.get("model_state_dict") or chk
+        model.load_state_dict(state_dict)
     model.eval()
 
     eval_transform = get_eval_transform()
@@ -44,7 +52,9 @@ def test_preprocessing_parity_and_logit_agreement():
 
         # Assert tensor outputs match exactly
         tensor_diff = torch.max(torch.abs(train_tensor - serve_tensor)).item()
-        assert tensor_diff < 1e-6, f"Image {idx}: Preprocessed tensors differ by {tensor_diff}"
+        assert (
+            tensor_diff < 1e-6
+        ), f"Image {idx}: Preprocessed tensors differ by {tensor_diff}"
 
         # Assert logits match to < 1e-4
         with torch.inference_mode():
@@ -55,4 +65,6 @@ def test_preprocessing_parity_and_logit_agreement():
         assert (
             max_logit_diff < 1e-4
         ), f"Image {idx}: Logits differ by {max_logit_diff:.6e} (exceeds 1e-4 tolerance)"
-        print(f"Image {idx} ({raw_img.mode}) Logit Agreement: max diff = {max_logit_diff:.6e} (PASS)")
+        print(
+            f"Image {idx} ({raw_img.mode}) Logit Agreement: max diff = {max_logit_diff:.6e} (PASS)"
+        )

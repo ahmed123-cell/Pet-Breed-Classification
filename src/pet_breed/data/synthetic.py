@@ -4,11 +4,15 @@ for rapid local prototyping, CI verification, and offline benchmarking.
 """
 
 import random
-from pathlib import Path
-import numpy as np
+
 from PIL import Image, ImageDraw
 
-from pet_breed.config import ANNOTATIONS_DIR, IMAGES_DIR, get_class_names, get_species_map
+from pet_breed.config import (
+    ANNOTATIONS_DIR,
+    IMAGES_DIR,
+    get_class_names,
+    get_species_map,
+)
 
 
 def generate_sample_dataset(samples_per_class: int = 5) -> None:
@@ -24,7 +28,9 @@ def generate_sample_dataset(samples_per_class: int = 5) -> None:
     trainval_lines = []
     test_lines = []
 
-    print(f"Generating {samples_per_class} sample images per class for {len(classes)} classes...")
+    print(
+        f"Generating {samples_per_class} sample images per class for {len(classes)} classes..."
+    )
     random.seed(42)
 
     for class_idx, class_name in enumerate(classes):
@@ -74,7 +80,9 @@ def generate_sample_dataset(samples_per_class: int = 5) -> None:
     with open(ANNOTATIONS_DIR / "test.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(test_lines) + "\n")
 
-    print(f"Sample dataset generated: {len(list(IMAGES_DIR.glob('*.jpg')))} images in {IMAGES_DIR}")
+    print(
+        f"Sample dataset generated: {len(list(IMAGES_DIR.glob('*.jpg')))} images in {IMAGES_DIR}"
+    )
 
 
 if __name__ == "__main__":

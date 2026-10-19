@@ -34,8 +34,10 @@ data/corrupted/
 data/raw/
 data/torchvision_oxford/
 *.part
-models/checkpoints/
-models/exported/
+models/checkpoints/*
+!models/checkpoints/.gitkeep
+models/exported/*
+!models/exported/.gitkeep
 *.pth
 *.pt
 *.onnx*

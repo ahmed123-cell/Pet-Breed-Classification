@@ -2,9 +2,7 @@
 TensorRT FP16 conversion script and Triton Model Repository configuration with dynamic batching.
 """
 
-import os
 from pathlib import Path
-from typing import Dict, Optional
 
 from pet_breed.config import EXPORTED_MODELS_DIR, MODELS_DIR
 
@@ -72,7 +70,7 @@ def build_tensorrt_engine_command(
     Generate the trtexec command for building an optimized TensorRT FP16 engine with dynamic shapes.
     """
     output_engine_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     cmd = (
         f"trtexec --onnx={onnx_path} "
         f"--saveEngine={output_engine_path} "
